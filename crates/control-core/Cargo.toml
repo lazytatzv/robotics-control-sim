@@ -1,0 +1,13 @@
+[package]
+name = "control-core"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance robotics and control theory algorithms core"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"], default-features = false, optional = true }
+
+[features]
+default = ["std", "serde"]
+std = []
+serde = ["dep:serde"]
