@@ -49,11 +49,11 @@ export const PidControls: React.FC<PidControlsProps> = ({
         </div>
         <div className="param-row">
           <select onChange={(e) => onApplyPreset(e.target.value)} defaultValue="tuned">
-            <option value="tuned">PRESET: WELL_TUNED</option>
-            <option value="oscillatory">PRESET: UNDERDAMPED (HIGH KP)</option>
-            <option value="sluggish">PRESET: OVERDAMPED (LOW KP)</option>
-            <option value="windup_demo">PRESET: WINDUP_DEMONSTRATION</option>
-            <option value="ipd_demo">PRESET: I-PD_KICK_PREVENTION</option>
+            <option value="tuned">PRESET: CRITICALLY DAMPED (0% OVERSHOOT, FAST)</option>
+            <option value="fast">PRESET: ULTRA HIGH-RESPONSE (SNAPPY)</option>
+            <option value="oscillatory">PRESET: UNDERDAMPED (RINGING / OVERSHOOT)</option>
+            <option value="sluggish">PRESET: OVERDAMPED (SLOW CREEP)</option>
+            <option value="windup_demo">PRESET: WINDUP DEMO (SATURATION)</option>
           </select>
         </div>
       </div>
@@ -69,7 +69,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
           <input
             type="range"
             min="0"
-            max="30"
+            max="40"
             step="0.1"
             value={state.kp}
             onChange={(e) => onChange({ kp: parseFloat(e.target.value) })}
@@ -83,7 +83,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
           <input
             type="range"
             min="0"
-            max="25"
+            max="30"
             step="0.1"
             value={state.ki}
             onChange={(e) => onChange({ ki: parseFloat(e.target.value) })}
@@ -91,13 +91,13 @@ export const PidControls: React.FC<PidControlsProps> = ({
         </div>
         <div className="param-row">
           <div className="param-label">
-            <span>KD (DERIVATIVE)</span>
+            <span>KD (DERIVATIVE / DAMPING)</span>
             <span className="param-value">{state.kd.toFixed(3)}</span>
           </div>
           <input
             type="range"
             min="0"
-            max="5"
+            max="6"
             step="0.01"
             value={state.kd}
             onChange={(e) => onChange({ kd: parseFloat(e.target.value) })}
@@ -128,8 +128,8 @@ export const PidControls: React.FC<PidControlsProps> = ({
             value={state.form}
             onChange={(e) => onChange({ form: e.target.value as any })}
           >
+            <option value="pi_d">PI-D (DERIVATIVE ON PV - RECOMMENDED)</option>
             <option value="standard">STANDARD PID</option>
-            <option value="pi_d">PI-D (DERIVATIVE ON PV)</option>
             <option value="i_pd">I-PD (PROPORTIONAL & DERIV ON PV)</option>
           </select>
         </div>

@@ -8,11 +8,11 @@ import { ControlPlot } from './ControlPlot';
 
 const INITIAL_STATE: PidControlState = {
   plantType: 'motor_pos',
-  kp: 5.0,
-  ki: 1.5,
-  kd: 0.85,
-  filterN: 10,
-  form: 'standard',
+  kp: 15.0,
+  ki: 2.0,
+  kd: 1.8,
+  filterN: 25,
+  form: 'pi_d',
   antiWindup: 'clamping',
   saturation: 12.0,
   target: 1.57,
@@ -95,20 +95,31 @@ export const PidSimulator: React.FC = () => {
         case 'tuned':
           return {
             ...prev,
-            kp: 5.0,
-            ki: 1.5,
-            kd: 0.85,
-            filterN: 10,
-            form: 'standard',
+            kp: 15.0,
+            ki: 2.0,
+            kd: 1.8,
+            filterN: 25,
+            form: 'pi_d',
+            antiWindup: 'clamping',
+            saturation: 12.0,
+          };
+        case 'fast':
+          return {
+            ...prev,
+            kp: 25.0,
+            ki: 4.0,
+            kd: 2.5,
+            filterN: 30,
+            form: 'pi_d',
             antiWindup: 'clamping',
             saturation: 12.0,
           };
         case 'oscillatory':
           return {
             ...prev,
-            kp: 18.0,
-            ki: 8.0,
-            kd: 0.02,
+            kp: 20.0,
+            ki: 10.0,
+            kd: 0.1,
             filterN: 10,
             form: 'standard',
             antiWindup: 'clamping',
@@ -116,27 +127,20 @@ export const PidSimulator: React.FC = () => {
         case 'sluggish':
           return {
             ...prev,
-            kp: 0.8,
-            ki: 0.2,
-            kd: 0.05,
+            kp: 2.0,
+            ki: 0.5,
+            kd: 0.8,
             filterN: 10,
+            form: 'standard',
           };
         case 'windup_demo':
           return {
             ...prev,
-            kp: 2.0,
-            ki: 12.0,
-            kd: 0.1,
+            kp: 5.0,
+            ki: 15.0,
+            kd: 0.2,
             saturation: 3.0,
             antiWindup: 'none',
-          };
-        case 'ipd_demo':
-          return {
-            ...prev,
-            kp: 5.0,
-            ki: 1.5,
-            kd: 0.85,
-            form: 'i_pd',
           };
         default:
           return prev;
