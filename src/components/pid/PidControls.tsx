@@ -92,6 +92,30 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
         </div>
       </div>
 
+      {/* Always Visible Quick Test & Excitation */}
+      <div className="control-block" style={{ borderBottom: '1px solid #27272a' }}>
+        <div className="block-header">EXCITATION & TEST ACTIONS</div>
+        <div className="button-grid">
+          <button className="btn-mono btn-mono-invert" onClick={onStepInput}>
+            STEP INVERT
+          </button>
+          <button className="btn-mono" onClick={onPulseDisturbance}>
+            PULSE LOAD
+          </button>
+        </div>
+        <div className="button-grid">
+          <button className="btn-mono" onClick={onReset}>
+            RESET
+          </button>
+          <button
+            className={`btn-mono ${state.isPaused ? 'active' : ''}`}
+            onClick={() => onChange({ isPaused: !state.isPaused })}
+          >
+            {state.isPaused ? 'RESUME' : 'PAUSE'}
+          </button>
+        </div>
+      </div>
+
       {/* Navigation Sub-Tabs */}
       <div className="section-tabs" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <button
@@ -1028,26 +1052,6 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
               value={state.noise}
               onChange={(e) => onChange({ noise: parseFloat(e.target.value) })}
             />
-          </div>
-
-          <div className="button-grid">
-            <button className="btn-mono btn-mono-invert" onClick={onStepInput}>
-              STEP INVERT
-            </button>
-            <button className="btn-mono" onClick={onPulseDisturbance}>
-              PULSE LOAD
-            </button>
-          </div>
-          <div className="button-grid">
-            <button className="btn-mono" onClick={onReset}>
-              RESET
-            </button>
-            <button
-              className={`btn-mono ${state.isPaused ? 'active' : ''}`}
-              onClick={() => onChange({ isPaused: !state.isPaused })}
-            >
-              {state.isPaused ? 'RESUME' : 'PAUSE'}
-            </button>
           </div>
         </div>
       )}
