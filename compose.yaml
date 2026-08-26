@@ -1,9 +1,0 @@
-services:
-  dev:
-    image: node:22-bookworm-slim
-    working_dir: /app
-    volumes:
-      - .:/app
-    ports:
-      - "3000:3000"
-    command: sh -c "corepack enable && pnpm install && pnpm dev --host"
