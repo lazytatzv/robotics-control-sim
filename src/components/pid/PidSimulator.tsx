@@ -148,53 +148,102 @@ export const PidSimulator: React.FC = () => {
     });
   }, []);
 
+  // Correct step response analysis based on the latest step transition
   const calculateMetrics = (data: StepDataPoint[]) => {
     if (data.length < 20) return;
-    const target = data[data.length - 1].setpoint;
-    const initial = data[0].actual;
-    const delta = target - initial;
 
-    if (Math.abs(delta) < 1e-3) {
-      setMetrics({
-        riseTime: '--',
-        overshoot: '0.0 %',
-        settlingTime: '--',
-        steadyStateError: Math.abs(target - data[data.length - 1].actual).toFixed(3),
-      });
-      return;
-    }
+    const currentTarget = data[data.length - 1].setpoint;
+    const latestActual = data[data.length - 1].actual;
+    const steadyError = Math.abs(currentTarget - latestActual);
 
-    let peak = initial;
-    for (const d of data) {
-      if (delta > 0 && d.actual > peak) peak = d.actual;
-      if (delta < 0 && d.actual < peak) peak = d.actual;
-    }
-
-    const overshoot = delta > 0 ? Math.max(0, (peak - target) / delta) * 100 : Math.max(0, (target - peak) / -delta) * 100;
-
-    const y10 = initial + delta * 0.1;
-    const y90 = initial + delta * 0.9;
-    let t10: number | null = null;
-    let t90: number | null = null;
-
-    for (const d of data) {
-      if (t10 === null && (delta > 0 ? d.actual >= y10 : d.actual <= y10)) t10 = d.t;
-      if (t90 === null && (delta > 0 ? d.actual >= y90 : d.actual <= y90)) t90 = d.t;
-    }
-
-    let ts: number | null = null;
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (Math.abs(data[i].actual - target) > Math.abs(delta) * 0.05) {
-        ts = data[i].t;
+    // 1. Detect the most recent setpoint step change
+    let stepStartIdx = 0;
+    for (let i = data.length - 1; i > 0; i--) {
+      if (Math.abs(data[i].setpoint - data[i - 1].setpoint) > 0.02) {
+        stepStartIdx = i;
         break;
       }
     }
 
+    // Initial state before this step occurred
+    const initialActual = stepStartIdx > 0 ? data[stepStartIdx - 1].actual : data[0].actual;
+    const stepDelta = currentTarget - initialActual;
+    const stepStartTime = data[stepStartIdx].t;
+
+    // If change was negligible, only report steady error
+    if (Math.abs(stepDelta) < 0.05) {
+      setMetrics({
+        riseTime: '--',
+        overshoot: '0.0 %',
+        settlingTime: '--',
+        steadyStateError: steadyError.toFixed(3),
+      });
+      return;
+    }
+
+    // 2. Search for Peak value during this step transition
+    const stepSlice = data.slice(stepStartIdx);
+    let peakActual = initialActual;
+
+    if (stepDelta > 0) {
+      for (const d of stepSlice) {
+        if (d.actual > peakActual) peakActual = d.actual;
+      }
+    } else {
+      for (const d of stepSlice) {
+        if (d.actual < peakActual) peakActual = d.actual;
+      }
+    }
+
+    // Calculate Overshoot (%)
+    let overshootPercent = 0;
+    if (stepDelta > 0 && peakActual > currentTarget) {
+      overshootPercent = ((peakActual - currentTarget) / stepDelta) * 100;
+    } else if (stepDelta < 0 && peakActual < currentTarget) {
+      overshootPercent = ((currentTarget - peakActual) / Math.abs(stepDelta)) * 100;
+    }
+
+    // 3. 10% to 90% Rise Time
+    const y10 = initialActual + stepDelta * 0.1;
+    const y90 = initialActual + stepDelta * 0.9;
+    let t10: number | null = null;
+    let t90: number | null = null;
+
+    for (const d of stepSlice) {
+      if (t10 === null && (stepDelta > 0 ? d.actual >= y10 : d.actual <= y10)) {
+        t10 = d.t;
+      }
+      if (t90 === null && (stepDelta > 0 ? d.actual >= y90 : d.actual <= y90)) {
+        t90 = d.t;
+      }
+    }
+
+    const riseTimeStr = t10 !== null && t90 !== null && t90 >= t10 ? `${(t90 - t10).toFixed(2)}s` : '--';
+
+    // 4. Settling Time (5% threshold of stepDelta)
+    const threshold = Math.abs(stepDelta) * 0.05;
+    let lastOutlierTime: number | null = null;
+
+    for (const d of stepSlice) {
+      if (Math.abs(d.actual - currentTarget) > threshold) {
+        lastOutlierTime = d.t;
+      }
+    }
+
+    // Settling time is only valid if it currently stays inside the threshold
+    const isCurrentlySettled = Math.abs(latestActual - currentTarget) <= threshold;
+    const settlingTimeStr =
+      isCurrentlySettled && lastOutlierTime !== null
+        ? `${Math.max(0, lastOutlierTime - stepStartTime).toFixed(2)}s`
+        : isCurrentlySettled
+        ? '0.00s'
+        : '--';
+
     setMetrics({
-      riseTime: t10 !== null && t90 !== null && t90 >= t10 ? `${(t90 - t10).toFixed(2)}s` : '--',
-      overshoot: `${overshoot.toFixed(1)}%`,
-      settlingTime: ts !== null ? `${ts.toFixed(2)}s` : '--',
-      steadyStateError: Math.abs(target - data[data.length - 1].actual).toFixed(3),
+      riseTime: riseTimeStr,
+      overshoot: `${overshootPercent.toFixed(1)} %`,
+      settlingTime: settlingTimeStr,
+      steadyStateError: steadyError.toFixed(3),
     });
   };
 
