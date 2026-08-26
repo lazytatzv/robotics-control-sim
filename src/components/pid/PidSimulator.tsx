@@ -9,8 +9,8 @@ import { ControlPlot } from './ControlPlot';
 const INITIAL_STATE: PidControlState = {
   plantType: 'motor_pos',
   kp: 5.0,
-  ki: 3.0,
-  kd: 0.35,
+  ki: 1.5,
+  kd: 0.85,
   filterN: 10,
   form: 'standard',
   antiWindup: 'clamping',
@@ -85,6 +85,10 @@ export const PidSimulator: React.FC = () => {
     }, 400);
   }, []);
 
+  const handleTargetChange = useCallback((newTarget: number) => {
+    setControlState((prev) => ({ ...prev, target: newTarget }));
+  }, []);
+
   const handleApplyPreset = useCallback((preset: string) => {
     setControlState((prev) => {
       switch (preset) {
@@ -92,8 +96,8 @@ export const PidSimulator: React.FC = () => {
           return {
             ...prev,
             kp: 5.0,
-            ki: 3.0,
-            kd: 0.35,
+            ki: 1.5,
+            kd: 0.85,
             filterN: 10,
             form: 'standard',
             antiWindup: 'clamping',
@@ -130,8 +134,8 @@ export const PidSimulator: React.FC = () => {
           return {
             ...prev,
             kp: 5.0,
-            ki: 3.0,
-            kd: 0.35,
+            ki: 1.5,
+            kd: 0.85,
             form: 'i_pd',
           };
         default:
@@ -245,7 +249,11 @@ export const PidSimulator: React.FC = () => {
 
       <section className="viewport-deck">
         <MetricsBar metrics={metrics} />
-        <PlantCanvas data={lastDataPoint} plantType={controlState.plantType} />
+        <PlantCanvas
+          data={lastDataPoint}
+          plantType={controlState.plantType}
+          onTargetChange={handleTargetChange}
+        />
         <ResponsePlot history={historySnapshot} />
         <ControlPlot history={historySnapshot} />
       </section>
