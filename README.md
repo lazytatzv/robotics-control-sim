@@ -1,6 +1,6 @@
 # Robotics & Control Lab
 
-A high-performance, browser-based simulator for control systems and robotics kinematics, powered by **Rust (WebAssembly)** and **React**.
+A high-performance, browser-based simulator for control systems and robotics kinematics, powered by **Rust (WebAssembly)**, **React**, and **pnpm**.
 
 🎮 **Live Demo:** [https://lazytatzv.github.io/robotics-control-sim/](https://lazytatzv.github.io/robotics-control-sim/)
 
@@ -27,7 +27,7 @@ A high-performance, browser-based simulator for control systems and robotics kin
 ## Tech Stack
 
 * **Core Engine**: Rust (`crates/control-core`, `no_std` compatible) + `wasm-bindgen`
-* **Frontend**: React 18, TypeScript, Vite, Lucide Icons, HTML5 Canvas
+* **Frontend**: React 19, TypeScript, Vite, Lucide Icons, HTML5 Canvas, pnpm
 
 ---
 
@@ -35,13 +35,13 @@ A high-performance, browser-based simulator for control systems and robotics kin
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Run development server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 ```
 
 ---
