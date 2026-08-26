@@ -7,6 +7,8 @@ type SectionKey =
   | 'smc'
   | 'notch_scurve'
   | 'bode_stability'
+  | 'nyquist'
+  | 'signals_ident'
   | 'autotune'
   | 'kinematics';
 
@@ -14,18 +16,20 @@ export const TheoryGuide: React.FC = () => {
   const [activeKey, setActiveKey] = useState<SectionKey>('guide');
 
   const navItems: { key: SectionKey; title: string; subtitle: string }[] = [
-    { key: 'guide', title: '01 // QUICK START & USAGE', subtitle: 'Oscilloscope, Bode & batch mode operations' },
+    { key: 'guide', title: '01 // QUICK START & USAGE', subtitle: 'Oscilloscope, Bode, Nyquist & batch modes' },
     { key: 'pid_2dof', title: '02 // PID, 2-DOF & FEEDFORWARD', subtitle: 'Filtered derivative, setpoint weights, FF' },
     { key: 'cascade', title: '03 // CASCADE P-PI SERVO', subtitle: 'Industrial dual-loop position-velocity control' },
     { key: 'smc', title: '04 // SLIDING MODE CONTROL (SMC)', subtitle: 'Robust nonlinear control with boundary layer' },
     { key: 'notch_scurve', title: '05 // NOTCH FILTER & S-CURVE', subtitle: 'Resonance suppression & jerk-limited motion' },
     { key: 'bode_stability', title: '06 // BODE & STABILITY MARGINS', subtitle: 'Phase/gain margins & bandwidth criteria' },
-    { key: 'autotune', title: '07 // AUTO-TUNING ALGORITHMS', subtitle: 'Pole placement, CHR & Ziegler-Nichols' },
-    { key: 'kinematics', title: '08 // ROBOT ARM KINEMATICS', subtitle: '2-DOF planar analytical FK and IK' },
+    { key: 'nyquist', title: '07 // NYQUIST STABILITY CRITERION', subtitle: 'Complex plane locus & (-1, 0j) encirclement' },
+    { key: 'signals_ident', title: '08 // EXCITATION & IDENTIFICATION', subtitle: 'Impulse, Ramp tracking & Chirp Sine Sweep' },
+    { key: 'autotune', title: '09 // AUTO-TUNING ALGORITHMS', subtitle: 'Pole placement, CHR & Ziegler-Nichols' },
+    { key: 'kinematics', title: '10 // ROBOT ARM KINEMATICS', subtitle: '2-DOF planar analytical FK and IK' },
   ];
 
   return (
-    <main style={{ gridTemplateColumns: '260px 1fr', background: 'var(--bg-black)', height: 'calc(100vh - 45px)' }}>
+    <main style={{ gridTemplateColumns: '270px 1fr', background: 'var(--bg-black)', height: 'calc(100vh - 45px)' }}>
       {/* Sidebar Navigation */}
       <aside className="sidebar" style={{ borderRight: '1px solid var(--border-subtle)', padding: '0.75rem', overflowY: 'auto' }}>
         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-bright)', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
@@ -70,36 +74,27 @@ export const TheoryGuide: React.FC = () => {
               <li>
                 <strong>TIME SCOPE (Real-time Continuous Mode)</strong>:
                 A continuous, moving-window oscilloscope displaying active plant position, velocity, control effort, and PID components.
-                Ideal for interactive slider manipulation and live disturbance injection.
               </li>
               <li>
                 <strong>BODE PLOT (Frequency Response Analysis)</strong>:
-                Real-time frequency-domain computation of open-loop L(jω) and closed-loop T(jω) transfer functions across 0.05 to 2000 rad/s,
-                automatically extracting gain/phase crossover frequencies, phase margin (PM), gain margin (GM), and -3dB bandwidth.
+                Real-time frequency-domain computation of open-loop L(jω) and closed-loop T(jω) transfer functions across 0.05 to 2000 rad/s.
+              </li>
+              <li>
+                <strong>NYQUIST PLOT (Polar Complex Stability Mode)</strong>:
+                Visualizes open-loop frequency locus on the complex plane (Re, Im) with critical point (-1, 0j) and unit circle overlays.
               </li>
               <li>
                 <strong>5S BATCH (Instant Step Response Mode)</strong>:
-                Similar to MATLAB <code>step(sys)</code>, calculates a full 0.0s to 5.0s step transient (including a load disturbance at 2.5s)
-                instantaneously in Rust at Δt = 5ms for stationary inspection.
+                Similar to MATLAB <code>step(sys)</code>, calculates a full 0.0s to 5.0s step transient instantaneously in Rust at Δt = 5ms.
               </li>
             </ul>
 
-            <h3>2. Analysis & Comparison Tools</h3>
+            <h3>2. Dynamic Excitation Waveforms</h3>
             <ul>
-              <li>
-                <strong>CAPTURE A/B (Ghost Trace Overlay)</strong>:
-                Freezes the current transient waveform as a dashed baseline overlay. Modify gains, controllers, or physical parameters to
-                directly compare before-and-after response curves on the same viewport.
-              </li>
-              <li>
-                <strong>EXPORT CSV (Telemetry Export)</strong>:
-                Downloads complete time-series telemetry (time, setpoint, actual, velocity, error, u_total, P, I, D, FF, current, saturation)
-                for post-processing in MATLAB or Python (Pandas/NumPy).
-              </li>
-              <li>
-                <strong>STEP INVERT & PULSE LOAD</strong>:
-                Excites the system with a ±1.57 rad step reversal or a 4.0 N·m torque pulse to evaluate setpoint tracking and disturbance rejection.
-              </li>
+              <li><strong>STEP INPUT</strong>: Standard step setpoint transition with automated rise time (tr), peak overshoot (Mp), and settling time (ts).</li>
+              <li><strong>IMPULSE TRAIN</strong>: Dirac delta pulse excitation testing instantaneous recovery and energy dissipation.</li>
+              <li><strong>RAMP INPUT</strong>: Constant-velocity tracking assessing steady-state velocity error (ess).</li>
+              <li><strong>CHIRP SINE SWEEP</strong>: Continuous frequency sweep excitation (0.1 Hz to 30 Hz) for physical resonance and friction identification.</li>
             </ul>
           </div>
         )}
@@ -259,10 +254,74 @@ export const TheoryGuide: React.FC = () => {
           </div>
         )}
 
-        {/* SECTION 7: AUTO-TUNING */}
+        {/* SECTION 7: NYQUIST STABILITY */}
+        {activeKey === 'nyquist' && (
+          <div className="reference-view">
+            <h2>07 // NYQUIST STABILITY CRITERION</h2>
+            <p>
+              The Nyquist stability criterion determines the absolute stability of a closed-loop system by mapping the open-loop
+              frequency locus L(jω) across -∞ &lt; ω &lt; +∞ onto the complex plane (Re, Im).
+            </p>
+
+            <h3>1. Cauchy Argument Principle & Encirclement Law</h3>
+            <p>
+              The number of unstable closed-loop poles Z in the right-half plane (RHP) is governed by:
+            </p>
+            <div style={{ background: '#121215', padding: '1rem', border: '1px solid #27272a', borderRadius: '4px', margin: '0.75rem 0', fontFamily: 'monospace' }}>
+              Z = N + P<br />
+              where  N = number of clockwise encirclements of critical point (-1, 0j)<br />
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; P = number of open-loop poles in RHP (P = 0 for open-loop stable plants)
+            </div>
+            <ul>
+              <li><strong>Closed-Loop Stability Requirement</strong>: For open-loop stable plants (P = 0), the closed-loop system is strictly stable if and only if the locus <strong>does NOT encircle (-1, 0j)</strong> (i.e. N = 0).</li>
+              <li><strong>Geometric Margins on Complex Plane</strong>:
+                <ul>
+                  <li><strong>Phase Margin (PM)</strong>: Angle between the negative real axis and the intersection of the locus with the unit circle |L| = 1.</li>
+                  <li><strong>Gain Margin (GM)</strong>: Distance 1 / |L(jω_pc)| where the locus crosses the negative real axis.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {/* SECTION 8: EXCITATION & SYSTEM IDENTIFICATION */}
+        {activeKey === 'signals_ident' && (
+          <div className="reference-view">
+            <h2>08 // DYNAMIC EXCITATION & SYSTEM IDENTIFICATION</h2>
+
+            <h3>1. Dirac Delta Impulse Response</h3>
+            <p>
+              An ideal impulse contains infinite frequency components simultaneously. In physical simulation, a narrow pulse excitation
+              tests the system impulse response h(t), exposing natural oscillation modes, damping, and energy dissipation rates.
+            </p>
+
+            <h3>2. Ramp Input & Steady-State Velocity Error (Type 1 Tracking)</h3>
+            <p>
+              Commanding a constant velocity reference r(t) = v0 · t tests the system type and velocity error constant Kv:
+            </p>
+            <div style={{ background: '#121215', padding: '1rem', border: '1px solid #27272a', borderRadius: '4px', margin: '0.75rem 0', fontFamily: 'monospace' }}>
+              e_v(t) = lim (t-&gt;inf) [ r(t) - y(t) ] = v0 / Kv<br />
+              (Adding Velocity Feedforward Kvff reduces this lag to exactly 0.0)
+            </div>
+
+            <h3>3. Chirp Sine Sweep (Frequency Sweep Identification)</h3>
+            <p>
+              The chirp signal sweeps sinusoidal excitation from f0 to f1 over duration T:
+            </p>
+            <div style={{ background: '#121215', padding: '1rem', border: '1px solid #27272a', borderRadius: '4px', margin: '0.75rem 0', fontFamily: 'monospace' }}>
+              r(t) = A · sin( 2π · ( f0·t + (f1 - f0)/(2·T) · t² ) )
+            </div>
+            <p>
+              By observing the live phase lag and attenuation as excitation frequency increases, engineers can visually detect
+              mechanical resonance peaks, verify notch filter attenuation in real time, and quantify non-linear friction deadbands.
+            </p>
+          </div>
+        )}
+
+        {/* SECTION 9: AUTO-TUNING */}
         {activeKey === 'autotune' && (
           <div className="reference-view">
-            <h2>07 // MATHEMATICAL AUTO-TUNING ALGORITHMS</h2>
+            <h2>09 // MATHEMATICAL AUTO-TUNING ALGORITHMS</h2>
             <p>
               Synthesizes mathematically optimal controller gains based on identified physical motor parameters (J, B, Kt, Ke, R).
             </p>
@@ -283,10 +342,10 @@ export const TheoryGuide: React.FC = () => {
           </div>
         )}
 
-        {/* SECTION 8: KINEMATICS */}
+        {/* SECTION 10: KINEMATICS */}
         {activeKey === 'kinematics' && (
           <div className="reference-view">
-            <h2>08 // 2-DOF PLANAR ROBOT ARM KINEMATICS</h2>
+            <h2>10 // 2-DOF PLANAR ROBOT ARM KINEMATICS</h2>
 
             <h3>1. Forward Kinematics (FK)</h3>
             <p>Computes end-effector Cartesian coordinates (x, y) from joint angles (θ1, θ2):</p>

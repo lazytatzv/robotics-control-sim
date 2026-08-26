@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Simulator, StepDataPoint, BodeAnalysis, MotorSettings, MsdSettings, TunedGains } from '../../sim-bridge';
+import {
+  Simulator,
+  StepDataPoint,
+  BodeAnalysis,
+  NyquistAnalysis,
+  MotorSettings,
+  MsdSettings,
+  TunedGains,
+} from '../../sim-bridge';
 import { PidControls, PidControlState } from './PidControls';
 import { MetricsBar, PerformanceMetrics } from './MetricsBar';
 import { PlantCanvas } from './PlantCanvas';
 import { ResponsePlot } from './ResponsePlot';
 import { ControlPlot } from './ControlPlot';
 import { BodePlot } from './BodePlot';
+import { NyquistPlot } from './NyquistPlot';
 
 const INITIAL_MOTOR: MotorSettings = {
   j: 0.01,
@@ -70,6 +79,15 @@ const INITIAL_STATE: PidControlState = {
     enabled: false,
   },
 
+  signal: {
+    type: 'step',
+    amplitude: 1.57,
+    freqStart: 0.2,
+    freqEnd: 15.0,
+    chirpDuration: 10.0,
+    rampSlope: 1.0,
+  },
+
   motor: INITIAL_MOTOR,
   msd: INITIAL_MSD,
 
@@ -81,9 +99,10 @@ const INITIAL_STATE: PidControlState = {
 
 export const PidSimulator: React.FC = () => {
   const [controlState, setControlState] = useState<PidControlState>(INITIAL_STATE);
-  const [scopeMode, setScopeMode] = useState<'time' | 'bode' | 'batch'>('time');
+  const [scopeMode, setScopeMode] = useState<'time' | 'bode' | 'nyquist' | 'batch'>('time');
   const [baselineSnapshot, setBaselineSnapshot] = useState<StepDataPoint[] | null>(null);
   const [bodeAnalysis, setBodeAnalysis] = useState<BodeAnalysis | null>(null);
+  const [nyquistAnalysis, setNyquistAnalysis] = useState<NyquistAnalysis | null>(null);
 
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     riseTime: '--',
@@ -199,6 +218,20 @@ export const PidSimulator: React.FC = () => {
     );
   }, [controlState.trajectory]);
 
+  // Update Dynamic Signal Generator in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    const s = controlState.signal;
+    simRef.current.configure_signal_generator(
+      s.type,
+      s.amplitude,
+      s.freqStart,
+      s.freqEnd,
+      s.chirpDuration,
+      s.rampSlope
+    );
+  }, [controlState.signal]);
+
   // Update Plant parameters (Motor & MSD) in WASM
   useEffect(() => {
     if (!simRef.current) return;
@@ -231,20 +264,23 @@ export const PidSimulator: React.FC = () => {
     setLastDataPoint(null);
   }, [controlState.plantType]);
 
-  // Recompute Bode Stability Analysis whenever PID or Plant parameters change
+  // Recompute Bode & Nyquist Stability Analysis whenever PID or Plant parameters change
   useEffect(() => {
     if (!simRef.current) return;
     try {
-      const analysis = simRef.current.get_bode_analysis() as BodeAnalysis;
-      setBodeAnalysis(analysis);
+      const bode = simRef.current.get_bode_analysis() as BodeAnalysis;
+      setBodeAnalysis(bode);
+      const nyq = simRef.current.get_nyquist_analysis() as NyquistAnalysis;
+      setNyquistAnalysis(nyq);
+
       setMetrics((prev) => ({
         ...prev,
-        phaseMargin: analysis.phase_margin_deg !== undefined ? `${analysis.phase_margin_deg.toFixed(1)}°` : '--',
-        gainMargin: analysis.gain_margin_db !== undefined ? `${analysis.gain_margin_db.toFixed(1)} dB` : '∞',
-        isStable: analysis.is_stable,
+        phaseMargin: bode.phase_margin_deg !== undefined ? `${bode.phase_margin_deg.toFixed(1)}°` : '--',
+        gainMargin: bode.gain_margin_db !== undefined ? `${bode.gain_margin_db.toFixed(1)} dB` : '∞',
+        isStable: bode.is_stable,
       }));
     } catch (err) {
-      console.error('Bode calculation error:', err);
+      console.error('Frequency response calculation error:', err);
     }
   }, [
     controlState.plantType,
@@ -767,6 +803,13 @@ export const PidSimulator: React.FC = () => {
         {scopeMode === 'bode' && (
           <>
             <BodePlot analysis={bodeAnalysis} />
+            <ResponsePlot history={historySnapshot} baselineHistory={baselineSnapshot} />
+          </>
+        )}
+
+        {scopeMode === 'nyquist' && (
+          <>
+            <NyquistPlot analysis={nyquistAnalysis} />
             <ResponsePlot history={historySnapshot} baselineHistory={baselineSnapshot} />
           </>
         )}

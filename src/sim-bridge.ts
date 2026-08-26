@@ -98,6 +98,27 @@ export interface TrajectorySettings {
   enabled: boolean;
 }
 
+export interface NyquistPoint {
+  omega: number;
+  re: number;
+  im: number;
+}
+
+export interface NyquistAnalysis {
+  positive_freq_points: NyquistPoint[];
+  negative_freq_points: NyquistPoint[];
+  is_stable: boolean;
+}
+
+export interface SignalSettings {
+  type: 'step' | 'impulse' | 'ramp' | 'chirp';
+  amplitude: number;
+  freqStart: number;
+  freqEnd: number;
+  chirpDuration: number;
+  rampSlope: number;
+}
+
 export interface TunedGains {
   kp: number;
   ki: number;
@@ -116,3 +137,4 @@ export async function initializeWasm(): Promise<void> {
 }
 
 export { Simulator, arm2_fk, arm2_ik };
+

@@ -83,6 +83,24 @@ pub struct BodeAnalysis {
     pub bandwidth: Option<f64>,           // -3dB closed-loop bandwidth
 }
 
+/// Point on Nyquist complex plane (Re, Im)
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct NyquistPoint {
+    pub omega: f64,
+    pub re: f64,
+    pub im: f64,
+}
+
+/// Nyquist analysis summary
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct NyquistAnalysis {
+    pub positive_freq_points: Vec<NyquistPoint>,
+    pub negative_freq_points: Vec<NyquistPoint>,
+    pub is_stable: bool,
+}
+
 /// Pole or Zero on complex s-plane
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -265,6 +283,55 @@ where
         gain_margin_db,
         is_stable,
         bandwidth,
+    }
+}
+
+/// Compute Nyquist locus for plant and PID configuration
+pub fn compute_nyquist_analysis<F>(eval_plant: F, pid: &PidConfig) -> NyquistAnalysis
+where
+    F: Fn(f64) -> Complex,
+{
+    let num_points = 300;
+    let omega_min: f64 = 0.02;
+    let omega_max: f64 = 1500.0;
+    let log_min = omega_min.ln();
+    let log_max = omega_max.ln();
+    let step = (log_max - log_min) / (num_points as f64 - 1.0);
+
+    let mut positive_freq_points = Vec::with_capacity(num_points);
+    let mut negative_freq_points = Vec::with_capacity(num_points);
+
+    for i in 0..num_points {
+        let omega = (log_min + i as f64 * step).exp();
+        let c = eval_pid_tf(pid, omega);
+        let p = eval_plant(omega);
+        let ol = c.mul(p);
+
+        // Clamp extreme magnitude for numerical plotting stability
+        let mag = ol.magnitude();
+        let (re, im) = if mag > 50.0 {
+            let scale = 50.0 / mag;
+            (ol.re * scale, ol.im * scale)
+        } else {
+            (ol.re, ol.im)
+        };
+
+        positive_freq_points.push(NyquistPoint { omega, re, im });
+        // Mirror for negative frequencies L(-jw) = Re(L) - j*Im(L)
+        negative_freq_points.push(NyquistPoint {
+            omega: -omega,
+            re,
+            im: -im,
+        });
+    }
+
+    // Determine stability via Bode phase margin
+    let bode = compute_bode_analysis(eval_plant, pid);
+
+    NyquistAnalysis {
+        positive_freq_points,
+        negative_freq_points,
+        is_stable: bode.is_stable,
     }
 }
 

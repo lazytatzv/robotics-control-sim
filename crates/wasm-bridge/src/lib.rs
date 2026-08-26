@@ -1,11 +1,11 @@
 use control_core::{
     analysis::{
-        compute_bode_analysis, eval_motor_position_tf, eval_motor_velocity_tf, eval_msd_tf,
-        tune_dc_motor, AutoTuneMethod,
+        compute_bode_analysis, compute_nyquist_analysis, eval_motor_position_tf,
+        eval_motor_velocity_tf, eval_msd_tf, tune_dc_motor, AutoTuneMethod,
     },
     advanced_control::{
-        CascadeConfig, CascadeController, ControlMode, NotchFilter, SCurveGenerator, SmcConfig,
-        SmcController,
+        CascadeConfig, CascadeController, ControlMode, NotchFilter, SCurveGenerator,
+        SignalGenerator, SignalType, SmcConfig, SmcController,
     },
     AntiWindupMethod, DcMotorParams, DcMotorPlant, MassSpringDamperParams, MassSpringDamperPlant,
     PidConfig, PidController, PidForm, Planar2LinkArm,
@@ -46,6 +46,7 @@ pub struct Simulator {
     scurve: SCurveGenerator,
     trajectory_enabled: bool,
     control_mode: ControlMode,
+    signal_gen: SignalGenerator,
 
     motor: DcMotorPlant,
     msd: MassSpringDamperPlant,
@@ -66,6 +67,7 @@ impl Simulator {
             scurve: SCurveGenerator::default(),
             trajectory_enabled: false,
             control_mode: ControlMode::Pid,
+            signal_gen: SignalGenerator::default(),
 
             motor: DcMotorPlant::new(DcMotorParams::default()),
             msd: MassSpringDamperPlant::new(MassSpringDamperParams::default()),
@@ -136,6 +138,29 @@ impl Simulator {
         self.scurve.max_acc = max_acc;
         self.scurve.max_jerk = max_jerk;
         self.trajectory_enabled = enabled;
+    }
+
+    pub fn configure_signal_generator(
+        &mut self,
+        signal_type_str: &str,
+        amplitude: f64,
+        frequency_start: f64,
+        frequency_end: f64,
+        chirp_duration: f64,
+        ramp_slope: f64,
+    ) {
+        let signal_type = match signal_type_str {
+            "impulse" => SignalType::Impulse,
+            "ramp" => SignalType::Ramp,
+            "chirp" => SignalType::Chirp,
+            _ => SignalType::Step,
+        };
+        self.signal_gen.signal_type = signal_type;
+        self.signal_gen.amplitude = amplitude;
+        self.signal_gen.frequency_start = frequency_start;
+        self.signal_gen.frequency_end = frequency_end;
+        self.signal_gen.chirp_duration = chirp_duration;
+        self.signal_gen.ramp_slope = ramp_slope;
     }
 
     pub fn set_plant_type(&mut self, plant_type_str: &str) {
@@ -271,10 +296,12 @@ impl Simulator {
         disturbance: f64,
         noise_amplitude: f64,
     ) -> Result<JsValue, JsValue> {
+        let (generated_target, _gen_vel) = self.signal_gen.evaluate(self.time, raw_setpoint);
+
         let (setpoint, _target_v, _target_a) = if self.trajectory_enabled {
-            self.scurve.step(raw_setpoint, dt)
+            self.scurve.step(generated_target, dt)
         } else {
-            (raw_setpoint, 0.0, 0.0)
+            (generated_target, 0.0, 0.0)
         };
 
         let actual = match self.plant_type {
@@ -412,6 +439,26 @@ impl Simulator {
             }
             PlantType::MassSpringDamper => {
                 compute_bode_analysis(|w| eval_msd_tf(&msd_p, w), &self.pid.config)
+            }
+        };
+
+        serde_wasm_bindgen::to_value(&analysis).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Compute Nyquist complex plane frequency locus
+    pub fn get_nyquist_analysis(&self) -> Result<JsValue, JsValue> {
+        let motor_p = self.motor.params.clone();
+        let msd_p = self.msd.params.clone();
+
+        let analysis = match self.plant_type {
+            PlantType::DcMotorPosition => {
+                compute_nyquist_analysis(|w| eval_motor_position_tf(&motor_p, w), &self.pid.config)
+            }
+            PlantType::DcMotorVelocity => {
+                compute_nyquist_analysis(|w| eval_motor_velocity_tf(&motor_p, w), &self.pid.config)
+            }
+            PlantType::MassSpringDamper => {
+                compute_nyquist_analysis(|w| eval_msd_tf(&msd_p, w), &self.pid.config)
             }
         };
 

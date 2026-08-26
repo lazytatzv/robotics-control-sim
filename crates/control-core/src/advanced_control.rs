@@ -302,3 +302,81 @@ impl SCurveGenerator {
         (self.current_pos, self.current_vel, self.current_acc)
     }
 }
+
+/// Signal Generator Excitation Type
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SignalType {
+    Step,
+    Impulse,
+    Ramp,
+    Chirp,
+}
+
+/// Dynamic Excitation Signal Generator
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SignalGenerator {
+    pub signal_type: SignalType,
+    pub amplitude: f64,
+    pub frequency_start: f64, // for Chirp (Hz)
+    pub frequency_end: f64,   // for Chirp (Hz)
+    pub chirp_duration: f64,  // Chirp period (s)
+    pub ramp_slope: f64,      // rad/s for Ramp
+}
+
+impl Default for SignalGenerator {
+    fn default() -> Self {
+        Self {
+            signal_type: SignalType::Step,
+            amplitude: 1.57,
+            frequency_start: 0.2,
+            frequency_end: 15.0,
+            chirp_duration: 10.0,
+            ramp_slope: 1.0,
+        }
+    }
+}
+
+impl SignalGenerator {
+    /// Generate reference signal value at time t
+    pub fn evaluate(&self, t: f64, base_target: f64) -> (f64, f64) {
+        match self.signal_type {
+            SignalType::Step => (base_target, 0.0),
+            SignalType::Impulse => {
+                // Approximate Dirac delta pulse of width 0.05s starting at t % 3.0s == 0.5s
+                let period_t = t % 3.0;
+                if period_t >= 0.5 && period_t <= 0.55 {
+                    (self.amplitude * 2.0, 0.0)
+                } else {
+                    (0.0, 0.0)
+                }
+            }
+            SignalType::Ramp => {
+                // Sawtooth / continuous bidirectional ramp
+                let period = 6.0;
+                let phase = t % period;
+                let target = if phase < period * 0.5 {
+                    -self.amplitude + (phase / (period * 0.5)) * (2.0 * self.amplitude)
+                } else {
+                    self.amplitude - ((phase - period * 0.5) / (period * 0.5)) * (2.0 * self.amplitude)
+                };
+                let vel = if phase < period * 0.5 { self.ramp_slope } else { -self.ramp_slope };
+                (target, vel)
+            }
+            SignalType::Chirp => {
+                // Linear frequency sweep chirp sine
+                let period_t = t % self.chirp_duration;
+                let f0 = self.frequency_start;
+                let f1 = self.frequency_end;
+                let t_dur = self.chirp_duration;
+                let k = (f1 - f0) / t_dur;
+                let phi = 2.0 * std::f64::consts::PI * (f0 * period_t + 0.5 * k * period_t * period_t);
+                let val = self.amplitude * phi.sin();
+                let inst_freq = 2.0 * std::f64::consts::PI * (f0 + k * period_t);
+                let vel = self.amplitude * inst_freq * phi.cos();
+                (val, vel)
+            }
+        }
+    }
+}

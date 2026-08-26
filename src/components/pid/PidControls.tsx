@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { CascadeSettings, MotorSettings, MsdSettings, NotchSettings, SmcSettings, TrajectorySettings } from '../../sim-bridge';
+import {
+  CascadeSettings,
+  MotorSettings,
+  MsdSettings,
+  NotchSettings,
+  SignalSettings,
+  SmcSettings,
+  TrajectorySettings,
+} from '../../sim-bridge';
 
 export interface PidControlState {
   plantType: 'motor_pos' | 'motor_velocity' | 'cart';
@@ -31,6 +39,9 @@ export interface PidControlState {
   motor: MotorSettings;
   msd: MsdSettings;
 
+  // Excitation & Dynamic Signals
+  signal: SignalSettings;
+
   // Signal & testing
   target: number;
   disturbance: number;
@@ -47,8 +58,8 @@ interface PidControlsProps {
   onApplyPreset: (preset: string) => void;
   onApplyMotorPreset: (preset: string) => void;
   onAutoTune: (method: string) => void;
-  scopeMode: 'time' | 'bode' | 'batch';
-  onScopeModeChange: (mode: 'time' | 'bode' | 'batch') => void;
+  scopeMode: 'time' | 'bode' | 'nyquist' | 'batch';
+  onScopeModeChange: (mode: 'time' | 'bode' | 'nyquist' | 'batch') => void;
 }
 
 export const PidControls: React.FC<PidControlsProps> = React.memo(({
@@ -70,7 +81,7 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
       {/* Scope Mode Selector */}
       <div className="control-block">
         <div className="block-header">VIEW // SCOPE ANALYSIS MODE</div>
-        <div className="button-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="button-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <button
             className={`btn-mono ${scopeMode === 'time' ? 'active' : ''}`}
             onClick={() => onScopeModeChange('time')}
@@ -82,6 +93,12 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
             onClick={() => onScopeModeChange('bode')}
           >
             BODE PLOT
+          </button>
+          <button
+            className={`btn-mono ${scopeMode === 'nyquist' ? 'active' : ''}`}
+            onClick={() => onScopeModeChange('nyquist')}
+          >
+            NYQUIST PLOT
           </button>
           <button
             className={`btn-mono ${scopeMode === 'batch' ? 'active' : ''}`}
@@ -1006,54 +1023,157 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
 
       {/* SECTION 5: SIGNALS, DISTURBANCE & TEST CONTROLS */}
       {activeSection === 'signals' && (
-        <div className="control-block">
-          <div className="block-header">SIGNALS, DISTURBANCE & EXCITATION</div>
-          
-          <div className="param-row">
-            <div className="param-label">
-              <span>SETPOINT TARGET (r)</span>
-              <span className="param-value">{state.target.toFixed(2)}</span>
+        <>
+          <div className="control-block">
+            <div className="block-header">DYNAMIC EXCITATION SIGNAL GENERATOR</div>
+            <p style={{ color: '#a1a1aa', fontSize: '0.68rem', lineHeight: '1.4' }}>
+              Generates dynamic reference waveforms to evaluate step response, velocity tracking lag, or frequency sweep identification.
+            </p>
+
+            <div className="param-row">
+              <div className="param-label"><span>EXCITATION TYPE</span></div>
+              <select
+                value={state.signal.type}
+                onChange={(e) => onChange({ signal: { ...state.signal, type: e.target.value as any } })}
+              >
+                <option value="step">1. STEP INPUT (CONSTANT TARGET)</option>
+                <option value="impulse">2. IMPULSE TRAIN (DIRAC DELTA PULSE)</option>
+                <option value="ramp">3. RAMP INPUT (CONSTANT VELOCITY TRACKING)</option>
+                <option value="chirp">4. CHIRP SINE SWEEP (SYSTEM IDENTIFICATION)</option>
+              </select>
             </div>
-            <input
-              type="range"
-              min="-3.14"
-              max="3.14"
-              step="0.05"
-              value={state.target}
-              onChange={(e) => onChange({ target: parseFloat(e.target.value) })}
-            />
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>SIGNAL AMPLITUDE</span>
+                <span className="param-value">{state.signal.amplitude.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="3.14"
+                step="0.05"
+                value={state.signal.amplitude}
+                onChange={(e) => onChange({ signal: { ...state.signal, amplitude: parseFloat(e.target.value) } })}
+              />
+            </div>
+
+            {state.signal.type === 'ramp' && (
+              <div className="param-row">
+                <div className="param-label">
+                  <span>RAMP SLOPE v0 (rad/s)</span>
+                  <span className="param-value">{state.signal.rampSlope.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="5.0"
+                  step="0.1"
+                  value={state.signal.rampSlope}
+                  onChange={(e) => onChange({ signal: { ...state.signal, rampSlope: parseFloat(e.target.value) } })}
+                />
+              </div>
+            )}
+
+            {state.signal.type === 'chirp' && (
+              <>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>START FREQUENCY f0 (Hz)</span>
+                    <span className="param-value">{state.signal.freqStart.toFixed(2)} Hz</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.05"
+                    max="5.0"
+                    step="0.05"
+                    value={state.signal.freqStart}
+                    onChange={(e) => onChange({ signal: { ...state.signal, freqStart: parseFloat(e.target.value) } })}
+                  />
+                </div>
+
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>END FREQUENCY f1 (Hz)</span>
+                    <span className="param-value">{state.signal.freqEnd.toFixed(1)} Hz</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2.0"
+                    max="30.0"
+                    step="0.5"
+                    value={state.signal.freqEnd}
+                    onChange={(e) => onChange({ signal: { ...state.signal, freqEnd: parseFloat(e.target.value) } })}
+                  />
+                </div>
+
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>SWEEP DURATION (s)</span>
+                    <span className="param-value">{state.signal.chirpDuration.toFixed(1)} s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="3.0"
+                    max="30.0"
+                    step="1.0"
+                    value={state.signal.chirpDuration}
+                    onChange={(e) => onChange({ signal: { ...state.signal, chirpDuration: parseFloat(e.target.value) } })}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="param-row">
-            <div className="param-label">
-              <span>LOAD DISTURBANCE (d)</span>
-              <span className="param-value">{state.disturbance.toFixed(1)} N·m</span>
+          <div className="control-block">
+            <div className="block-header">STATIC TARGET, DISTURBANCE & NOISE</div>
+            
+            <div className="param-row">
+              <div className="param-label">
+                <span>SETPOINT TARGET OFFSET (r)</span>
+                <span className="param-value">{state.target.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min="-3.14"
+                max="3.14"
+                step="0.05"
+                value={state.target}
+                onChange={(e) => onChange({ target: parseFloat(e.target.value) })}
+              />
             </div>
-            <input
-              type="range"
-              min="-10"
-              max="10"
-              step="0.2"
-              value={state.disturbance}
-              onChange={(e) => onChange({ disturbance: parseFloat(e.target.value) })}
-            />
-          </div>
 
-          <div className="param-row">
-            <div className="param-label">
-              <span>SENSOR NOISE AMPLITUDE</span>
-              <span className="param-value">{state.noise.toFixed(3)}</span>
+            <div className="param-row">
+              <div className="param-label">
+                <span>LOAD DISTURBANCE (d)</span>
+                <span className="param-value">{state.disturbance.toFixed(1)} N·m</span>
+              </div>
+              <input
+                type="range"
+                min="-10"
+                max="10"
+                step="0.2"
+                value={state.disturbance}
+                onChange={(e) => onChange({ disturbance: parseFloat(e.target.value) })}
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="0.2"
-              step="0.005"
-              value={state.noise}
-              onChange={(e) => onChange({ noise: parseFloat(e.target.value) })}
-            />
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>SENSOR NOISE AMPLITUDE</span>
+                <span className="param-value">{state.noise.toFixed(3)}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="0.2"
+                step="0.005"
+                value={state.noise}
+                onChange={(e) => onChange({ noise: parseFloat(e.target.value) })}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </aside>
   );
