@@ -5,12 +5,14 @@ pub mod pid;
 pub mod plant;
 pub mod kinematics;
 pub mod analysis;
+pub mod advanced_control;
 
 pub use integrator::*;
 pub use pid::*;
 pub use plant::*;
 pub use kinematics::*;
 pub use analysis::*;
+pub use advanced_control::*;
 
 #[cfg(test)]
 mod tests {

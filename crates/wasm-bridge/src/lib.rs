@@ -3,6 +3,10 @@ use control_core::{
         compute_bode_analysis, eval_motor_position_tf, eval_motor_velocity_tf, eval_msd_tf,
         tune_dc_motor, AutoTuneMethod,
     },
+    advanced_control::{
+        CascadeConfig, CascadeController, ControlMode, NotchFilter, SCurveGenerator, SmcConfig,
+        SmcController,
+    },
     AntiWindupMethod, DcMotorParams, DcMotorPlant, MassSpringDamperParams, MassSpringDamperPlant,
     PidConfig, PidController, PidForm, Planar2LinkArm,
 };
@@ -35,6 +39,14 @@ pub enum PlantType {
 #[wasm_bindgen]
 pub struct Simulator {
     pid: PidController,
+    cascade: CascadeController,
+    smc: SmcController,
+    notch: NotchFilter,
+    notch_enabled: bool,
+    scurve: SCurveGenerator,
+    trajectory_enabled: bool,
+    control_mode: ControlMode,
+
     motor: DcMotorPlant,
     msd: MassSpringDamperPlant,
     plant_type: PlantType,
@@ -47,11 +59,83 @@ impl Simulator {
     pub fn new() -> Self {
         Self {
             pid: PidController::new(PidConfig::default()),
+            cascade: CascadeController::new(CascadeConfig::default()),
+            smc: SmcController::new(SmcConfig::default()),
+            notch: NotchFilter::default(),
+            notch_enabled: false,
+            scurve: SCurveGenerator::default(),
+            trajectory_enabled: false,
+            control_mode: ControlMode::Pid,
+
             motor: DcMotorPlant::new(DcMotorParams::default()),
             msd: MassSpringDamperPlant::new(MassSpringDamperParams::default()),
             plant_type: PlantType::DcMotorPosition,
             time: 0.0,
         }
+    }
+
+    pub fn set_control_mode(&mut self, mode_str: &str) {
+        self.control_mode = match mode_str {
+            "cascade" => ControlMode::CascadePpi,
+            "smc" => ControlMode::SlidingMode,
+            _ => ControlMode::Pid,
+        };
+    }
+
+    pub fn configure_cascade(
+        &mut self,
+        kpp: f64,
+        kvp: f64,
+        kvi: f64,
+        max_velocity: f64,
+        max_voltage: f64,
+    ) {
+        self.cascade.config.kpp = kpp;
+        self.cascade.config.kvp = kvp;
+        self.cascade.config.kvi = kvi;
+        self.cascade.config.max_velocity = max_velocity;
+        self.cascade.config.max_voltage = max_voltage;
+    }
+
+    pub fn configure_smc(
+        &mut self,
+        lambda: f64,
+        k_switch: f64,
+        boundary_epsilon: f64,
+        k_eq: f64,
+        max_voltage: f64,
+    ) {
+        self.smc.config.lambda = lambda;
+        self.smc.config.k_switch = k_switch;
+        self.smc.config.boundary_epsilon = boundary_epsilon;
+        self.smc.config.k_eq = k_eq;
+        self.smc.config.max_voltage = max_voltage;
+    }
+
+    pub fn configure_notch(
+        &mut self,
+        omega_notch: f64,
+        zeta_num: f64,
+        zeta_den: f64,
+        enabled: bool,
+    ) {
+        self.notch.omega_notch = omega_notch;
+        self.notch.zeta_num = zeta_num;
+        self.notch.zeta_den = zeta_den;
+        self.notch_enabled = enabled;
+    }
+
+    pub fn configure_trajectory(
+        &mut self,
+        max_vel: f64,
+        max_acc: f64,
+        max_jerk: f64,
+        enabled: bool,
+    ) {
+        self.scurve.max_vel = max_vel;
+        self.scurve.max_acc = max_acc;
+        self.scurve.max_jerk = max_jerk;
+        self.trajectory_enabled = enabled;
     }
 
     pub fn set_plant_type(&mut self, plant_type_str: &str) {
@@ -170,6 +254,10 @@ impl Simulator {
 
     pub fn reset(&mut self) {
         self.pid.reset();
+        self.cascade.reset();
+        self.smc.reset();
+        self.notch.reset();
+        self.scurve.reset(0.0);
         self.motor.reset();
         self.msd.reset();
         self.time = 0.0;
@@ -179,14 +267,25 @@ impl Simulator {
     pub fn step(
         &mut self,
         dt: f64,
-        setpoint: f64,
+        raw_setpoint: f64,
         disturbance: f64,
         noise_amplitude: f64,
     ) -> Result<JsValue, JsValue> {
+        let (setpoint, _target_v, _target_a) = if self.trajectory_enabled {
+            self.scurve.step(raw_setpoint, dt)
+        } else {
+            (raw_setpoint, 0.0, 0.0)
+        };
+
         let actual = match self.plant_type {
             PlantType::DcMotorPosition => self.motor.angle(),
             PlantType::DcMotorVelocity => self.motor.velocity(),
             PlantType::MassSpringDamper => self.msd.position(),
+        };
+
+        let vel_actual = match self.plant_type {
+            PlantType::DcMotorPosition | PlantType::DcMotorVelocity => self.motor.velocity(),
+            PlantType::MassSpringDamper => self.msd.velocity(),
         };
 
         // Add sensor noise
@@ -197,14 +296,56 @@ impl Simulator {
         };
         let measured = actual + noise;
 
-        let pid_out = self.pid.update(setpoint, measured, dt);
+        let (mut u, p_term, i_term, d_term, ff_term, error, is_saturated) = match self.control_mode {
+            ControlMode::Pid => {
+                let pid_out = self.pid.update(setpoint, measured, dt);
+                (
+                    pid_out.u,
+                    pid_out.p_term,
+                    pid_out.i_term,
+                    pid_out.d_term,
+                    pid_out.ff_term,
+                    pid_out.error,
+                    pid_out.is_saturated,
+                )
+            }
+            ControlMode::CascadePpi => {
+                let (u_casc, target_vel, pos_err) = self.cascade.update(setpoint, measured, vel_actual, dt);
+                (
+                    u_casc,
+                    self.cascade.config.kpp * pos_err,
+                    self.cascade.vel_integral * self.cascade.config.kvi,
+                    target_vel,
+                    0.0,
+                    pos_err,
+                    u_casc.abs() >= self.cascade.config.max_voltage - 1e-3,
+                )
+            }
+            ControlMode::SlidingMode => {
+                let (u_smc, s_surf, pos_err) = self.smc.update(setpoint, measured, vel_actual, dt);
+                (
+                    u_smc,
+                    self.smc.config.lambda * pos_err,
+                    0.0,
+                    s_surf,
+                    0.0,
+                    pos_err,
+                    u_smc.abs() >= self.smc.config.max_voltage - 1e-3,
+                )
+            }
+        };
+
+        // Apply Notch Filter if enabled
+        if self.notch_enabled {
+            u = self.notch.process(u, dt);
+        }
 
         match self.plant_type {
             PlantType::DcMotorPosition | PlantType::DcMotorVelocity => {
-                self.motor.step(pid_out.u, disturbance, dt);
+                self.motor.step(u, disturbance, dt);
             }
             PlantType::MassSpringDamper => {
-                self.msd.step(pid_out.u, disturbance, dt);
+                self.msd.step(u, disturbance, dt);
             }
         }
 
@@ -214,17 +355,14 @@ impl Simulator {
             t: self.time,
             setpoint,
             actual,
-            velocity: match self.plant_type {
-                PlantType::DcMotorPosition | PlantType::DcMotorVelocity => self.motor.velocity(),
-                PlantType::MassSpringDamper => self.msd.velocity(),
-            },
-            error: pid_out.error,
-            u: pid_out.u,
-            p_term: pid_out.p_term,
-            i_term: pid_out.i_term,
-            d_term: pid_out.d_term,
-            ff_term: pid_out.ff_term,
-            is_saturated: pid_out.is_saturated,
+            velocity: vel_actual,
+            error,
+            u,
+            p_term,
+            i_term,
+            d_term,
+            ff_term,
+            is_saturated,
             current: self.motor.current(),
         };
 
@@ -252,49 +390,9 @@ impl Simulator {
                 0.0
             };
 
-            let actual = match self.plant_type {
-                PlantType::DcMotorPosition => self.motor.angle(),
-                PlantType::DcMotorVelocity => self.motor.velocity(),
-                PlantType::MassSpringDamper => self.msd.position(),
-            };
-
-            let noise = if noise_amplitude > 0.0 {
-                (js_sys::Math::random() * 2.0 - 1.0) * noise_amplitude
-            } else {
-                0.0
-            };
-            let measured = actual + noise;
-
-            let pid_out = self.pid.update(setpoint, measured, dt);
-
-            match self.plant_type {
-                PlantType::DcMotorPosition | PlantType::DcMotorVelocity => {
-                    self.motor.step(pid_out.u, dist, dt);
-                }
-                PlantType::MassSpringDamper => {
-                    self.msd.step(pid_out.u, dist, dt);
-                }
-            }
-
-            self.time += dt;
-
-            history.push(StepDataPoint {
-                t: self.time,
-                setpoint,
-                actual,
-                velocity: match self.plant_type {
-                    PlantType::DcMotorPosition | PlantType::DcMotorVelocity => self.motor.velocity(),
-                    PlantType::MassSpringDamper => self.msd.velocity(),
-                },
-                error: pid_out.error,
-                u: pid_out.u,
-                p_term: pid_out.p_term,
-                i_term: pid_out.i_term,
-                d_term: pid_out.d_term,
-                ff_term: pid_out.ff_term,
-                is_saturated: pid_out.is_saturated,
-                current: self.motor.current(),
-            });
+            let pt_val = self.step(dt, setpoint, dist, noise_amplitude)?;
+            let pt: StepDataPoint = serde_wasm_bindgen::from_value(pt_val)?;
+            history.push(pt);
         }
 
         serde_wasm_bindgen::to_value(&history).map_err(|e| JsValue::from_str(&e.to_string()))

@@ -68,6 +68,36 @@ export interface BodeAnalysis {
   bandwidth?: number;
 }
 
+export interface CascadeSettings {
+  kpp: number;
+  kvp: number;
+  kvi: number;
+  max_velocity: number;
+  max_voltage: number;
+}
+
+export interface SmcSettings {
+  lambda: number;
+  k_switch: number;
+  boundary_epsilon: number;
+  k_eq: number;
+  max_voltage: number;
+}
+
+export interface NotchSettings {
+  omega_notch: number;
+  zeta_num: number;
+  zeta_den: number;
+  enabled: boolean;
+}
+
+export interface TrajectorySettings {
+  max_vel: number;
+  max_acc: number;
+  max_jerk: number;
+  enabled: boolean;
+}
+
 export interface TunedGains {
   kp: number;
   ki: number;

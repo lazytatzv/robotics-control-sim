@@ -27,6 +27,7 @@ const INITIAL_MSD: MsdSettings = {
 
 const INITIAL_STATE: PidControlState = {
   plantType: 'motor_pos',
+  controlMode: 'pid',
   kp: 15.0,
   ki: 2.0,
   kd: 1.8,
@@ -41,6 +42,33 @@ const INITIAL_STATE: PidControlState = {
   kaff: 0.0,
   kFriction: 0.0,
   deadband: 0.0,
+
+  cascade: {
+    kpp: 20.0,
+    kvp: 1.5,
+    kvi: 15.0,
+    max_velocity: 15.0,
+    max_voltage: 12.0,
+  },
+  smc: {
+    lambda: 15.0,
+    k_switch: 8.0,
+    boundary_epsilon: 0.1,
+    k_eq: 0.5,
+    max_voltage: 12.0,
+  },
+  notch: {
+    omega_notch: 120.0,
+    zeta_num: 0.05,
+    zeta_den: 0.707,
+    enabled: false,
+  },
+  trajectory: {
+    max_vel: 10.0,
+    max_acc: 30.0,
+    max_jerk: 150.0,
+    enabled: false,
+  },
 
   motor: INITIAL_MOTOR,
   msd: INITIAL_MSD,
@@ -78,6 +106,12 @@ export const PidSimulator: React.FC = () => {
     simRef.current = sim;
   }, []);
 
+  // Update Control Mode in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    simRef.current.set_control_mode(controlState.controlMode);
+  }, [controlState.controlMode]);
+
   // Update PID & Feedforward configuration in WASM
   useEffect(() => {
     if (!simRef.current) return;
@@ -114,6 +148,56 @@ export const PidSimulator: React.FC = () => {
     controlState.kFriction,
     controlState.deadband,
   ]);
+
+  // Update Cascade Controller in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    const c = controlState.cascade;
+    simRef.current.configure_cascade(
+      c.kpp,
+      c.kvp,
+      c.kvi,
+      c.max_velocity,
+      controlState.saturation
+    );
+  }, [controlState.cascade, controlState.saturation]);
+
+  // Update Sliding Mode Controller (SMC) in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    const s = controlState.smc;
+    simRef.current.configure_smc(
+      s.lambda,
+      s.k_switch,
+      s.boundary_epsilon,
+      s.k_eq,
+      controlState.saturation
+    );
+  }, [controlState.smc, controlState.saturation]);
+
+  // Update Notch Filter in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    const n = controlState.notch;
+    simRef.current.configure_notch(
+      n.omega_notch,
+      n.zeta_num,
+      n.zeta_den,
+      n.enabled
+    );
+  }, [controlState.notch]);
+
+  // Update S-Curve Trajectory in WASM
+  useEffect(() => {
+    if (!simRef.current) return;
+    const t = controlState.trajectory;
+    simRef.current.configure_trajectory(
+      t.max_vel,
+      t.max_acc,
+      t.max_jerk,
+      t.enabled
+    );
+  }, [controlState.trajectory]);
 
   // Update Plant parameters (Motor & MSD) in WASM
   useEffect(() => {

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { MotorSettings, MsdSettings } from '../../sim-bridge';
+import { CascadeSettings, MotorSettings, MsdSettings, NotchSettings, SmcSettings, TrajectorySettings } from '../../sim-bridge';
 
 export interface PidControlState {
   plantType: 'motor_pos' | 'motor_velocity' | 'cart';
+  controlMode: 'pid' | 'cascade' | 'smc';
+
+  // Standard PID
   kp: number;
   ki: number;
   kd: number;
@@ -17,6 +20,12 @@ export interface PidControlState {
   kaff: number;
   kFriction: number;
   deadband: number;
+
+  // Advanced Controllers
+  cascade: CascadeSettings;
+  smc: SmcSettings;
+  notch: NotchSettings;
+  trajectory: TrajectorySettings;
   
   // Physical parameters
   motor: MotorSettings;
@@ -54,7 +63,7 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
   scopeMode,
   onScopeModeChange,
 }) => {
-  const [activeSection, setActiveSection] = useState<'controller' | 'plant' | 'autotune' | 'signals'>('controller');
+  const [activeSection, setActiveSection] = useState<'controller' | 'plant' | 'autotune' | 'filters' | 'signals'>('controller');
 
   return (
     <aside className="sidebar">
@@ -84,252 +93,423 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="section-tabs">
+      <div className="section-tabs" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         <button
           className={`tab-btn-sub ${activeSection === 'controller' ? 'active' : ''}`}
           onClick={() => setActiveSection('controller')}
         >
-          PID & FF
+          CONTROL
+        </button>
+        <button
+          className={`tab-btn-sub ${activeSection === 'filters' ? 'active' : ''}`}
+          onClick={() => setActiveSection('filters')}
+        >
+          NOTCH/S
         </button>
         <button
           className={`tab-btn-sub ${activeSection === 'plant' ? 'active' : ''}`}
           onClick={() => setActiveSection('plant')}
         >
-          PLANT DYNAMICS
+          PLANT
         </button>
         <button
           className={`tab-btn-sub ${activeSection === 'autotune' ? 'active' : ''}`}
           onClick={() => setActiveSection('autotune')}
         >
-          AUTO-TUNE
+          TUNE
         </button>
         <button
           className={`tab-btn-sub ${activeSection === 'signals' ? 'active' : ''}`}
           onClick={() => setActiveSection('signals')}
         >
-          SIGNALS
+          SIGNAL
         </button>
       </div>
 
-      {/* SECTION 1: PID CONTROLLER & FEEDFORWARD */}
+      {/* SECTION 1: CONTROLLER ARCHITECTURE & PARAMETERS */}
       {activeSection === 'controller' && (
         <>
           <div className="control-block">
-            <div className="block-header">01 // CONTROLLER PRESETS</div>
+            <div className="block-header">01 // CONTROL ARCHITECTURE</div>
             <div className="param-row">
-              <select onChange={(e) => onApplyPreset(e.target.value)} defaultValue="tuned">
-                <option value="tuned">CRITICALLY DAMPED (FAST & NO OVERSHOOT)</option>
-                <option value="fast">ULTRA HIGH-RESPONSE (SNAPPY BUT STABLE)</option>
-                <option value="oscillatory">UNDERDAMPED (RINGING / OVERSHOOT DEMO)</option>
-                <option value="sluggish">OVERDAMPED (SLOW ASYMPTOTIC CREEP)</option>
-                <option value="windup_demo">WINDUP PHENOMENON DEMO</option>
+              <select
+                value={state.controlMode}
+                onChange={(e) => onChange({ controlMode: e.target.value as any })}
+              >
+                <option value="pid">PID / 2-DOF PARALLEL CONTROLLER</option>
+                <option value="cascade">CASCADE P-PI (POSITION P + VELOCITY PI)</option>
+                <option value="smc">SLIDING MODE CONTROL (ROBUST SMC)</option>
               </select>
             </div>
           </div>
 
-          <div className="control-block">
-            <div className="block-header">02 // PID GAINS (Kp, Ki, Kd, N)</div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>KP (PROPORTIONAL)</span>
-                <input
-                  type="number"
-                  className="param-input-num"
-                  step="0.1"
-                  value={state.kp}
-                  onChange={(e) => onChange({ kp: parseFloat(e.target.value) || 0 })}
-                />
+          {/* STANDARD PID & 2-DOF */}
+          {state.controlMode === 'pid' && (
+            <>
+              <div className="control-block">
+                <div className="block-header">PID CONTROLLER PRESETS</div>
+                <div className="param-row">
+                  <select onChange={(e) => onApplyPreset(e.target.value)} defaultValue="tuned">
+                    <option value="tuned">CRITICALLY DAMPED (FAST & NO OVERSHOOT)</option>
+                    <option value="fast">ULTRA HIGH-RESPONSE (SNAPPY BUT STABLE)</option>
+                    <option value="oscillatory">UNDERDAMPED (RINGING / OVERSHOOT DEMO)</option>
+                    <option value="sluggish">OVERDAMPED (SLOW ASYMPTOTIC CREEP)</option>
+                    <option value="windup_demo">WINDUP PHENOMENON DEMO</option>
+                  </select>
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="60"
-                step="0.1"
-                value={state.kp}
-                onChange={(e) => onChange({ kp: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>KI (INTEGRAL)</span>
-                <input
-                  type="number"
-                  className="param-input-num"
-                  step="0.1"
-                  value={state.ki}
-                  onChange={(e) => onChange({ ki: parseFloat(e.target.value) || 0 })}
-                />
+
+              <div className="control-block">
+                <div className="block-header">PID GAINS (Kp, Ki, Kd, N)</div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>KP (PROPORTIONAL)</span>
+                    <input
+                      type="number"
+                      className="param-input-num"
+                      step="0.1"
+                      value={state.kp}
+                      onChange={(e) => onChange({ kp: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="60"
+                    step="0.1"
+                    value={state.kp}
+                    onChange={(e) => onChange({ kp: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>KI (INTEGRAL)</span>
+                    <input
+                      type="number"
+                      className="param-input-num"
+                      step="0.1"
+                      value={state.ki}
+                      onChange={(e) => onChange({ ki: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="50"
+                    step="0.1"
+                    value={state.ki}
+                    onChange={(e) => onChange({ ki: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>KD (DERIVATIVE / DAMPING)</span>
+                    <input
+                      type="number"
+                      className="param-input-num"
+                      step="0.01"
+                      value={state.kd}
+                      onChange={(e) => onChange({ kd: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="8"
+                    step="0.01"
+                    value={state.kd}
+                    onChange={(e) => onChange({ kd: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>FILTER N (CUTOFF RAD/S)</span>
+                    <input
+                      type="number"
+                      className="param-input-num"
+                      step="1"
+                      value={state.filterN}
+                      onChange={(e) => onChange({ filterN: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={state.filterN}
+                    onChange={(e) => onChange({ filterN: parseFloat(e.target.value) })}
+                  />
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="50"
-                step="0.1"
-                value={state.ki}
-                onChange={(e) => onChange({ ki: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>KD (DERIVATIVE / DAMPING)</span>
-                <input
-                  type="number"
-                  className="param-input-num"
-                  step="0.01"
-                  value={state.kd}
-                  onChange={(e) => onChange({ kd: parseFloat(e.target.value) || 0 })}
-                />
+
+              <div className="control-block">
+                <div className="block-header">2-DOF & FEEDFORWARD</div>
+                <div className="param-row">
+                  <div className="param-label"><span>ALGORITHM FORM</span></div>
+                  <select
+                    value={state.form}
+                    onChange={(e) => onChange({ form: e.target.value as any })}
+                  >
+                    <option value="pi_d">PI-D (DERIVATIVE ON PV - RECOMMENDED)</option>
+                    <option value="standard">STANDARD PID (DERIVATIVE ON ERROR)</option>
+                    <option value="i_pd">I-PD (P & D ON PV)</option>
+                    <option value="2dof">2-DOF PID (SETPOINT WEIGHTS b, c)</option>
+                  </select>
+                </div>
+
+                {state.form === '2dof' && (
+                  <>
+                    <div className="param-row">
+                      <div className="param-label">
+                        <span>SETPOINT WEIGHT b (P-TERM)</span>
+                        <span className="param-value">{state.setpointWeightB.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={state.setpointWeightB}
+                        onChange={(e) => onChange({ setpointWeightB: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                    <div className="param-row">
+                      <div className="param-label">
+                        <span>SETPOINT WEIGHT c (D-TERM)</span>
+                        <span className="param-value">{state.setpointWeightC.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={state.setpointWeightC}
+                        onChange={(e) => onChange({ setpointWeightC: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>VELOCITY FF (Kvff)</span>
+                    <span className="param-value">{state.kvff.toFixed(3)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2.0"
+                    step="0.02"
+                    value={state.kvff}
+                    onChange={(e) => onChange({ kvff: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>ACCELERATION FF (Kaff)</span>
+                    <span className="param-value">{state.kaff.toFixed(4)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.1"
+                    step="0.002"
+                    value={state.kaff}
+                    onChange={(e) => onChange({ kaff: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div className="param-row">
+                  <div className="param-label">
+                    <span>FRICTION FF COMP (Kfric)</span>
+                    <span className="param-value">{state.kFriction.toFixed(2)} V</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="3.0"
+                    step="0.05"
+                    value={state.kFriction}
+                    onChange={(e) => onChange({ kFriction: parseFloat(e.target.value) })}
+                  />
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="8"
-                step="0.01"
-                value={state.kd}
-                onChange={(e) => onChange({ kd: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>FILTER N (CUTOFF RAD/S)</span>
+            </>
+          )}
+
+          {/* CASCADE P-PI (INDUSTRIAL STANDARD) */}
+          {state.controlMode === 'cascade' && (
+            <div className="control-block">
+              <div className="block-header">CASCADE P-PI CONTROLLER PARAMETERS</div>
+              <p style={{ color: '#a1a1aa', fontSize: '0.68rem', lineHeight: '1.4' }}>
+                Position loop generates target velocity (v_ref); Velocity loop regulates motor torque/voltage.
+              </p>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>POSITION GAIN Kpp (1/s)</span>
+                  <input
+                    type="number"
+                    className="param-input-num"
+                    step="1"
+                    value={state.cascade.kpp}
+                    onChange={(e) => onChange({ cascade: { ...state.cascade, kpp: parseFloat(e.target.value) || 0 } })}
+                  />
+                </div>
                 <input
-                  type="number"
-                  className="param-input-num"
+                  type="range"
+                  min="1"
+                  max="60"
                   step="1"
-                  value={state.filterN}
-                  onChange={(e) => onChange({ filterN: parseFloat(e.target.value) || 0 })}
+                  value={state.cascade.kpp}
+                  onChange={(e) => onChange({ cascade: { ...state.cascade, kpp: parseFloat(e.target.value) } })}
                 />
               </div>
-              <input
-                type="range"
-                min="1"
-                max="100"
-                step="1"
-                value={state.filterN}
-                onChange={(e) => onChange({ filterN: parseFloat(e.target.value) })}
-              />
-            </div>
-          </div>
 
-          <div className="control-block">
-            <div className="block-header">03 // 2-DOF & FEEDFORWARD (ROBOTICS)</div>
-            <div className="param-row">
-              <div className="param-label"><span>ALGORITHM FORM</span></div>
-              <select
-                value={state.form}
-                onChange={(e) => onChange({ form: e.target.value as any })}
-              >
-                <option value="pi_d">PI-D (DERIVATIVE ON PV - RECOMMENDED)</option>
-                <option value="standard">STANDARD PID (DERIVATIVE ON ERROR)</option>
-                <option value="i_pd">I-PD (P & D ON PV)</option>
-                <option value="2dof">2-DOF PID (CUSTOM SETPOINT WEIGHTS b, c)</option>
-              </select>
-            </div>
-
-            {state.form === '2dof' && (
-              <>
-                <div className="param-row">
-                  <div className="param-label">
-                    <span>SETPOINT WEIGHT b (P-TERM)</span>
-                    <span className="param-value">{state.setpointWeightB.toFixed(2)}</span>
-                  </div>
+              <div className="param-row">
+                <div className="param-label">
+                  <span>VELOCITY P-GAIN Kvp (V·s/rad)</span>
                   <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={state.setpointWeightB}
-                    onChange={(e) => onChange({ setpointWeightB: parseFloat(e.target.value) })}
+                    type="number"
+                    className="param-input-num"
+                    step="0.1"
+                    value={state.cascade.kvp}
+                    onChange={(e) => onChange({ cascade: { ...state.cascade, kvp: parseFloat(e.target.value) || 0 } })}
                   />
                 </div>
-                <div className="param-row">
-                  <div className="param-label">
-                    <span>SETPOINT WEIGHT c (D-TERM)</span>
-                    <span className="param-value">{state.setpointWeightC.toFixed(2)}</span>
-                  </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                  value={state.cascade.kvp}
+                  onChange={(e) => onChange({ cascade: { ...state.cascade, kvp: parseFloat(e.target.value) } })}
+                />
+              </div>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>VELOCITY I-GAIN Kvi (V/rad)</span>
                   <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={state.setpointWeightC}
-                    onChange={(e) => onChange({ setpointWeightC: parseFloat(e.target.value) })}
+                    type="number"
+                    className="param-input-num"
+                    step="1"
+                    value={state.cascade.kvi}
+                    onChange={(e) => onChange({ cascade: { ...state.cascade, kvi: parseFloat(e.target.value) || 0 } })}
                   />
                 </div>
-              </>
-            )}
+                <input
+                  type="range"
+                  min="0"
+                  max="60"
+                  step="1"
+                  value={state.cascade.kvi}
+                  onChange={(e) => onChange({ cascade: { ...state.cascade, kvi: parseFloat(e.target.value) } })}
+                />
+              </div>
 
-            <div className="param-row">
-              <div className="param-label">
-                <span>VELOCITY FF (Kvff)</span>
-                <span className="param-value">{state.kvff.toFixed(3)}</span>
+              <div className="param-row">
+                <div className="param-label">
+                  <span>VELOCITY LIMIT (rad/s)</span>
+                  <span className="param-value">{state.cascade.max_velocity.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="50"
+                  step="1"
+                  value={state.cascade.max_velocity}
+                  onChange={(e) => onChange({ cascade: { ...state.cascade, max_velocity: parseFloat(e.target.value) } })}
+                />
               </div>
-              <input
-                type="range"
-                min="0"
-                max="2.0"
-                step="0.02"
-                value={state.kvff}
-                onChange={(e) => onChange({ kvff: parseFloat(e.target.value) })}
-              />
             </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>ACCELERATION FF (Kaff)</span>
-                <span className="param-value">{state.kaff.toFixed(4)}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="0.1"
-                step="0.002"
-                value={state.kaff}
-                onChange={(e) => onChange({ kaff: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>FRICTION FF COMP (Kfric)</span>
-                <span className="param-value">{state.kFriction.toFixed(2)} V</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="3.0"
-                step="0.05"
-                value={state.kFriction}
-                onChange={(e) => onChange({ kFriction: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="param-row">
-              <div className="param-label">
-                <span>DEADBAND THRESHOLD</span>
-                <span className="param-value">{state.deadband.toFixed(3)}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="0.05"
-                step="0.001"
-                value={state.deadband}
-                onChange={(e) => onChange({ deadband: parseFloat(e.target.value) })}
-              />
-            </div>
-          </div>
+          )}
 
+          {/* SLIDING MODE CONTROL (SMC) */}
+          {state.controlMode === 'smc' && (
+            <div className="control-block">
+              <div className="block-header">SLIDING MODE CONTROL (ROBUST SMC)</div>
+              <p style={{ color: '#a1a1aa', fontSize: '0.68rem', lineHeight: '1.4' }}>
+                Constrains state trajectory onto sliding manifold s(t) = e_dot + lambda * e = 0 with continuous boundary layer.
+              </p>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>SURFACE SLOPE λ (lambda)</span>
+                  <input
+                    type="number"
+                    className="param-input-num"
+                    step="1"
+                    value={state.smc.lambda}
+                    onChange={(e) => onChange({ smc: { ...state.smc, lambda: parseFloat(e.target.value) || 0 } })}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="40"
+                  step="1"
+                  value={state.smc.lambda}
+                  onChange={(e) => onChange({ smc: { ...state.smc, lambda: parseFloat(e.target.value) } })}
+                />
+              </div>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>ROBUST SWITCHING GAIN K_switch (V)</span>
+                  <input
+                    type="number"
+                    className="param-input-num"
+                    step="0.5"
+                    value={state.smc.k_switch}
+                    onChange={(e) => onChange({ smc: { ...state.smc, k_switch: parseFloat(e.target.value) || 0 } })}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="20"
+                  step="0.5"
+                  value={state.smc.k_switch}
+                  onChange={(e) => onChange({ smc: { ...state.smc, k_switch: parseFloat(e.target.value) } })}
+                />
+              </div>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>BOUNDARY LAYER ε (epsilon)</span>
+                  <span className="param-value">{state.smc.boundary_epsilon.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.01"
+                  max="0.5"
+                  step="0.01"
+                  value={state.smc.boundary_epsilon}
+                  onChange={(e) => onChange({ smc: { ...state.smc, boundary_epsilon: parseFloat(e.target.value) } })}
+                />
+              </div>
+
+              <div className="param-row">
+                <div className="param-label">
+                  <span>EQUIVALENT GAIN K_eq</span>
+                  <span className="param-value">{state.smc.k_eq.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2.0"
+                  step="0.05"
+                  value={state.smc.k_eq}
+                  onChange={(e) => onChange({ smc: { ...state.smc, k_eq: parseFloat(e.target.value) } })}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* VOLTAGE SATURATION */}
           <div className="control-block">
-            <div className="block-header">04 // SATURATION & ANTI-WINDUP</div>
-            <div className="param-row">
-              <div className="param-label"><span>ANTI-WINDUP METHOD</span></div>
-              <select
-                value={state.antiWindup}
-                onChange={(e) => onChange({ antiWindup: e.target.value as any })}
-              >
-                <option value="clamping">CLAMPING (CONDITIONAL INTEGRATION)</option>
-                <option value="back_calc">BACK-CALCULATION (TRACKING FEEDBACK)</option>
-                <option value="none">NONE (UNBOUNDED WINDUP)</option>
-              </select>
-            </div>
+            <div className="block-header">VOLTAGE SATURATION</div>
             <div className="param-row">
               <div className="param-label">
                 <span>VOLTAGE LIMIT ±UMAX</span>
@@ -348,7 +528,140 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
         </>
       )}
 
-      {/* SECTION 2: PLANT DYNAMICS (MOTOR & MASS-SPRING-DAMPER) */}
+      {/* SECTION 2: NOTCH FILTER & S-CURVE TRAJECTORY */}
+      {activeSection === 'filters' && (
+        <>
+          <div className="control-block">
+            <div className="block-header">BI-QUAD MECHANICAL NOTCH FILTER</div>
+            <p style={{ color: '#a1a1aa', fontSize: '0.68rem', lineHeight: '1.4' }}>
+              Rejects mechanical resonance frequencies in flexible couplings and gearboxes.
+            </p>
+
+            <div className="param-row">
+              <button
+                className={`btn-mono ${state.notch.enabled ? 'active' : ''}`}
+                onClick={() => onChange({ notch: { ...state.notch, enabled: !state.notch.enabled } })}
+              >
+                {state.notch.enabled ? '● NOTCH FILTER ACTIVE' : '○ NOTCH FILTER BYPASS'}
+              </button>
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>CENTER FREQ ω_notch (rad/s)</span>
+                <input
+                  type="number"
+                  className="param-input-num"
+                  step="5"
+                  value={state.notch.omega_notch}
+                  onChange={(e) => onChange({ notch: { ...state.notch, omega_notch: parseFloat(e.target.value) || 10 } })}
+                />
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="400"
+                step="5"
+                value={state.notch.omega_notch}
+                onChange={(e) => onChange({ notch: { ...state.notch, omega_notch: parseFloat(e.target.value) } })}
+              />
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>NOTCH DEPTH ζ_num</span>
+                <span className="param-value">{state.notch.zeta_num.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min="0.01"
+                max="0.5"
+                step="0.02"
+                value={state.notch.zeta_num}
+                onChange={(e) => onChange({ notch: { ...state.notch, zeta_num: parseFloat(e.target.value) } })}
+              />
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>NOTCH WIDTH ζ_den</span>
+                <span className="param-value">{state.notch.zeta_den.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min="0.2"
+                max="1.5"
+                step="0.05"
+                value={state.notch.zeta_den}
+                onChange={(e) => onChange({ notch: { ...state.notch, zeta_den: parseFloat(e.target.value) } })}
+              />
+            </div>
+          </div>
+
+          <div className="control-block">
+            <div className="block-header">S-CURVE / JERK-LIMITED TRAJECTORY</div>
+            <p style={{ color: '#a1a1aa', fontSize: '0.68rem', lineHeight: '1.4' }}>
+              Generates continuous jerk-limited smooth reference profiles instead of abrupt step inputs.
+            </p>
+
+            <div className="param-row">
+              <button
+                className={`btn-mono ${state.trajectory.enabled ? 'active' : ''}`}
+                onClick={() => onChange({ trajectory: { ...state.trajectory, enabled: !state.trajectory.enabled } })}
+              >
+                {state.trajectory.enabled ? '● S-CURVE GENERATOR ACTIVE' : '○ STEP INPUT (RAW JUMP)'}
+              </button>
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>MAX VELOCITY (rad/s)</span>
+                <span className="param-value">{state.trajectory.max_vel.toFixed(1)}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="30"
+                step="1"
+                value={state.trajectory.max_vel}
+                onChange={(e) => onChange({ trajectory: { ...state.trajectory, max_vel: parseFloat(e.target.value) } })}
+              />
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>MAX ACCEL (rad/s²)</span>
+                <span className="param-value">{state.trajectory.max_acc.toFixed(1)}</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                value={state.trajectory.max_acc}
+                onChange={(e) => onChange({ trajectory: { ...state.trajectory, max_acc: parseFloat(e.target.value) } })}
+              />
+            </div>
+
+            <div className="param-row">
+              <div className="param-label">
+                <span>MAX JERK (rad/s³)</span>
+                <span className="param-value">{state.trajectory.max_jerk.toFixed(0)}</span>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="500"
+                step="20"
+                value={state.trajectory.max_jerk}
+                onChange={(e) => onChange({ trajectory: { ...state.trajectory, max_jerk: parseFloat(e.target.value) } })}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* SECTION 3: PLANT DYNAMICS */}
       {activeSection === 'plant' && (
         <>
           <div className="control-block">
@@ -639,7 +952,7 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
         </>
       )}
 
-      {/* SECTION 3: AUTO-TUNING SUITE */}
+      {/* SECTION 4: AUTO-TUNING SUITE */}
       {activeSection === 'autotune' && (
         <div className="control-block">
           <div className="block-header">ONE-CLICK GAIN SYNTHESIS & TUNING</div>
@@ -667,7 +980,7 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
         </div>
       )}
 
-      {/* SECTION 4: SIGNALS, DISTURBANCE & TEST CONTROLS */}
+      {/* SECTION 5: SIGNALS, DISTURBANCE & TEST CONTROLS */}
       {activeSection === 'signals' && (
         <div className="control-block">
           <div className="block-header">SIGNALS, DISTURBANCE & EXCITATION</div>
