@@ -13,7 +13,7 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: 'SCOPE 02 // CONTROL SIGNAL u(t) & DECOMPOSITION',
+        title: 'SCOPE 02 // CONTROL SIGNAL u(t) & DECOMPOSITION (P, I, D)',
       });
     }
   }, []);
@@ -29,10 +29,10 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: 'CONTROL u(t)', color: '#ffffff', getValue: (d) => d.u, lineWidth: 1.5 },
-        { name: 'P-TERM', color: '#737373', getValue: (d) => d.p_term, dashed: true, lineWidth: 1 },
-        { name: 'I-TERM', color: '#525252', getValue: (d) => d.i_term, dashed: true, lineWidth: 1 },
-        { name: 'D-TERM', color: '#a3a3a3', getValue: (d) => d.d_term, dashed: true, lineWidth: 1 },
+        { name: 'u(t)', color: '#f43f5e', getValue: (d) => d.u, lineWidth: 2 },
+        { name: 'P', color: '#60a5fa', getValue: (d) => d.p_term, dashed: true, lineWidth: 1 },
+        { name: 'I', color: '#c084fc', getValue: (d) => d.i_term, dashed: true, lineWidth: 1 },
+        { name: 'D', color: '#34d399', getValue: (d) => d.d_term, dashed: true, lineWidth: 1 },
       ]);
     }
   }, [history]);

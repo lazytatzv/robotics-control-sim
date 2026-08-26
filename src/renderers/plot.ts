@@ -31,8 +31,8 @@ export class CanvasPlotter {
   public handleResize(): void {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    this.canvas.width = Math.round(rect.width * dpr);
+    this.canvas.height = Math.round(rect.height * dpr);
   }
 
   public render(
@@ -54,10 +54,10 @@ export class CanvasPlotter {
 
     if (history.length === 0) return;
 
-    const padLeft = 40 * dpr;
+    const padLeft = 46 * dpr;
     const padRight = 16 * dpr;
-    const padTop = 24 * dpr;
-    const padBottom = 20 * dpr;
+    const padTop = 26 * dpr;
+    const padBottom = 22 * dpr;
 
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
@@ -94,11 +94,11 @@ export class CanvasPlotter {
     const mapX = (t: number) => padLeft + ((t - tMin) / (tMax - tMin)) * plotW;
     const mapY = (val: number) => padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
-    // Grid ticks
-    ctx.strokeStyle = '#181818';
+    // Background Grid
+    ctx.strokeStyle = '#18181b';
     ctx.lineWidth = 1 * dpr;
-    ctx.fillStyle = '#404040';
-    ctx.font = `${8.5 * dpr}px ui-monospace, monospace`;
+    ctx.fillStyle = '#52525b';
+    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
 
     const yTicks = 4;
     for (let i = 0; i <= yTicks; i++) {
@@ -128,23 +128,23 @@ export class CanvasPlotter {
       ctx.fillText(`${t.toFixed(1)}s`, x, padTop + plotH + 4 * dpr);
     }
 
-    // Zero axis line
+    // Zero Reference Line
     if (this.options.showZeroLine && yMin <= 0 && yMax >= 0) {
       const yZero = mapY(0);
-      ctx.strokeStyle = '#262626';
-      ctx.lineWidth = 1 * dpr;
+      ctx.strokeStyle = '#27272a';
+      ctx.lineWidth = 1.2 * dpr;
       ctx.beginPath();
       ctx.moveTo(padLeft, yZero);
       ctx.lineTo(w - padRight, yZero);
       ctx.stroke();
     }
 
-    // Traces
+    // Signal Traces
     for (const s of series) {
       ctx.strokeStyle = s.color;
       ctx.lineWidth = (s.lineWidth ?? 1.5) * dpr;
       if (s.dashed) {
-        ctx.setLineDash([4 * dpr, 3 * dpr]);
+        ctx.setLineDash([5 * dpr, 3 * dpr]);
       } else {
         ctx.setLineDash([]);
       }
@@ -165,16 +165,16 @@ export class CanvasPlotter {
     }
     ctx.setLineDash([]);
 
-    // Title
-    ctx.fillStyle = '#525252';
-    ctx.font = `700 ${8.5 * dpr}px ui-monospace, monospace`;
+    // Scope Title
+    ctx.fillStyle = '#71717a';
+    ctx.font = `600 ${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(this.options.title, padLeft, 6 * dpr);
+    ctx.fillText(this.options.title, padLeft, 7 * dpr);
 
-    // Legend
+    // Dynamic Legend
     let legendX = w - padRight;
-    ctx.font = `${8.5 * dpr}px ui-monospace, monospace`;
+    ctx.font = `500 ${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'right';
     for (let i = series.length - 1; i >= 0; i--) {
       const s = series[i];
@@ -182,7 +182,7 @@ export class CanvasPlotter {
       const label = `${s.name}: ${latestVal}`;
       
       ctx.fillStyle = s.color;
-      ctx.fillText(label, legendX, 6 * dpr);
+      ctx.fillText(label, legendX, 7 * dpr);
       legendX -= (ctx.measureText(label).width + 12 * dpr);
     }
   }

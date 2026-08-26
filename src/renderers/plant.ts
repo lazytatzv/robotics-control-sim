@@ -15,8 +15,8 @@ export class PlantRenderer {
   public handleResize(): void {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    this.canvas.width = Math.round(rect.width * dpr);
+    this.canvas.height = Math.round(rect.height * dpr);
   }
 
   public renderMotor(data: StepDataPoint, isVelocityMode: boolean): void {
@@ -27,89 +27,150 @@ export class PlantRenderer {
 
     ctx.clearRect(0, 0, w, h);
 
-    const cx = w / 2;
-    const cy = h / 2 + 6 * dpr;
-    const armLen = Math.min(w, h) * 0.35;
+    // Precise Center & Radius (guaranteed 1:1 circular aspect ratio)
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const radius = Math.min(w * 0.22, h * 0.38);
 
-    // Technical Axis Grid
-    ctx.strokeStyle = '#181818';
+    // Background technical grid
+    ctx.strokeStyle = '#18181b';
     ctx.lineWidth = 1 * dpr;
     ctx.beginPath();
-    ctx.moveTo(cx - armLen * 1.3, cy);
-    ctx.lineTo(cx + armLen * 1.3, cy);
-    ctx.moveTo(cx, cy - armLen * 1.3);
-    ctx.lineTo(cx, cy + armLen * 1.3);
+    ctx.moveTo(cx - radius * 2.2, cy);
+    ctx.lineTo(cx + radius * 2.2, cy);
+    ctx.moveTo(cx, cy - radius * 1.2);
+    ctx.lineTo(cx, cy + radius * 1.2);
     ctx.stroke();
 
-    // Machine Housing (Square Flange)
-    const boxSize = armLen * 0.95;
-    ctx.fillStyle = '#0a0a0a';
-    ctx.strokeStyle = '#262626';
-    ctx.lineWidth = 1 * dpr;
-    ctx.strokeRect(cx - boxSize, cy - boxSize, boxSize * 2, boxSize * 2);
-
-    // Rotary Bearing Outer Track
-    ctx.strokeStyle = '#333333';
+    // Motor Stator Housing (Sleek dark titanium chamfered body)
+    const housingW = radius * 1.6;
+    const housingH = radius * 1.6;
+    ctx.fillStyle = '#121216';
+    ctx.strokeStyle = '#27272a';
+    ctx.lineWidth = 1.5 * dpr;
     ctx.beginPath();
-    ctx.arc(cx, cy, armLen * 0.65, 0, Math.PI * 2);
+    ctx.roundRect(cx - housingW, cy - housingH, housingW * 2, housingH * 2, 8 * dpr);
+    ctx.fill();
     ctx.stroke();
+
+    // Stator Mounting Screws
+    ctx.fillStyle = '#27272a';
+    const boltOffset = housingW - 10 * dpr;
+    [-1, 1].forEach(sx => {
+      [-1, 1].forEach(sy => {
+        ctx.beginPath();
+        ctx.arc(cx + sx * boltOffset, cy + sy * boltOffset, 3 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+
+    // Precision Rotor Disc (Matte graphite circle)
+    ctx.fillStyle = '#18181f';
+    ctx.strokeStyle = '#3f3f46';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Laser-etched Angle Graduations (30 deg intervals)
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      const isCard = i % 3 === 0;
+      const tLen = (isCard ? 8 : 4) * dpr;
+      const x1 = cx + (radius - tLen) * Math.cos(ang);
+      const y1 = cy + (radius - tLen) * Math.sin(ang);
+      const x2 = cx + radius * Math.cos(ang);
+      const y2 = cy + radius * Math.sin(ang);
+      ctx.strokeStyle = isCard ? '#71717a' : '#3f3f46';
+      ctx.lineWidth = (isCard ? 1.5 : 1) * dpr;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
 
     if (!isVelocityMode) {
-      // Target Setpoint Vector (Dashed Silver/White)
+      // Target Setpoint Pointer (Subtle Amber line)
       const targetAngle = data.setpoint;
-      const tx = cx + armLen * Math.cos(targetAngle);
-      const ty = cy + armLen * Math.sin(targetAngle);
+      const tx = cx + (radius - 2 * dpr) * Math.cos(targetAngle);
+      const ty = cy + (radius - 2 * dpr) * Math.sin(targetAngle);
 
-      ctx.strokeStyle = '#737373';
-      ctx.setLineDash([3 * dpr, 3 * dpr]);
-      ctx.lineWidth = 1 * dpr;
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+      ctx.setLineDash([4 * dpr, 3 * dpr]);
+      ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(tx, ty);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Target Crosshair point
-      ctx.strokeStyle = '#a3a3a3';
-      ctx.strokeRect(tx - 3 * dpr, ty - 3 * dpr, 6 * dpr, 6 * dpr);
+      // Target notch
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3.5 * dpr, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Actual Rotor Arm (Solid Crisp Pure White Line)
+    // Actual Rotor Needle (High-Contrast Electric Cyan)
     const currentAngle = isVelocityMode ? (data.t * data.velocity) : data.actual;
-    const ax = cx + armLen * Math.cos(currentAngle);
-    const ay = cy + armLen * Math.sin(currentAngle);
+    const ax = cx + (radius - 4 * dpr) * Math.cos(currentAngle);
+    const ay = cy + (radius - 4 * dpr) * Math.sin(currentAngle);
 
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2 * dpr;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5 * dpr;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(ax, ay);
     ctx.stroke();
 
-    // End-of-arm precision dot
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ax - 2.5 * dpr, ay - 2.5 * dpr, 5 * dpr, 5 * dpr);
-
-    // Center Hub Pivot
-    ctx.fillStyle = '#000000';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5 * dpr;
+    // Center Bearing Hub
+    ctx.fillStyle = '#09090b';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
-    ctx.arc(cx, cy, 5 * dpr, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 6 * dpr, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Technical Readout Overlay
-    ctx.fillStyle = '#525252';
-    ctx.font = `${9 * dpr}px ui-monospace, monospace`;
-    ctx.textAlign = 'left';
-    ctx.fillText(`PLANT: DC-MOTOR [${isVelocityMode ? 'VELOCITY_MODE' : 'POSITION_MODE'}]`, 12 * dpr, 16 * dpr);
-    ctx.fillText(`CURRENT: ${data.current.toFixed(2)} A`, 12 * dpr, 28 * dpr);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2 * dpr, 0, Math.PI * 2);
+    ctx.fill();
 
+    // Velocity Rotation Arc Indicator
+    if (Math.abs(data.velocity) > 0.05) {
+      const velDir = data.velocity > 0 ? 1 : -1;
+      const arcR = radius * 0.5;
+      const arcLen = Math.min(Math.abs(data.velocity) * 0.25, Math.PI * 0.75) * velDir;
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, arcR, currentAngle, currentAngle + arcLen, velDir < 0);
+      ctx.stroke();
+    }
+
+    // Precision HUD Overlays
+    ctx.font = `${9.5 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+    
+    // Left Telemetry Box
+    ctx.fillStyle = '#71717a';
+    ctx.textAlign = 'left';
+    ctx.fillText(`PLANT: DC-MOTOR (${isVelocityMode ? 'VELOCITY' : 'POSITION'})`, 16 * dpr, 20 * dpr);
+    ctx.fillText(`CURRENT: ${data.current.toFixed(2)} A`, 16 * dpr, 36 * dpr);
+    ctx.fillText(`VOLTAGE: ${data.u.toFixed(2)} V`, 16 * dpr, 52 * dpr);
+
+    // Right Telemetry Box
     ctx.textAlign = 'right';
-    ctx.fillText(`VELOCITY: ${data.velocity.toFixed(2)} RAD/S`, w - 12 * dpr, 16 * dpr);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`SPEED: ${data.velocity.toFixed(2)} rad/s`, w - 16 * dpr, 20 * dpr);
     if (!isVelocityMode) {
-      ctx.fillText(`POSITION: ${data.actual.toFixed(3)} RAD (${((data.actual * 180) / Math.PI).toFixed(1)}°)`, w - 12 * dpr, 28 * dpr);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`ANGLE: ${((data.actual * 180) / Math.PI).toFixed(1)}° (${data.actual.toFixed(3)} rad)`, w - 16 * dpr, 36 * dpr);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText(`TARGET: ${((data.setpoint * 180) / Math.PI).toFixed(1)}°`, w - 16 * dpr, 52 * dpr);
     }
   }
 
@@ -121,77 +182,110 @@ export class PlantRenderer {
 
     ctx.clearRect(0, 0, w, h);
 
-    const groundY = h * 0.68;
-    const wallX = 30 * dpr;
+    const groundY = h * 0.65;
+    const wallX = 35 * dpr;
 
-    // Linear Rail / Ground (Minimalist Double Line)
-    ctx.strokeStyle = '#262626';
-    ctx.lineWidth = 1 * dpr;
+    // Linear Guide Rail
+    ctx.strokeStyle = '#27272a';
+    ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
     ctx.moveTo(0, groundY);
     ctx.lineTo(w, groundY);
-    ctx.moveTo(0, groundY + 4 * dpr);
-    ctx.lineTo(w, groundY + 4 * dpr);
     ctx.stroke();
 
-    // Base Support Wall
-    ctx.fillStyle = '#121212';
-    ctx.strokeStyle = '#333333';
-    ctx.strokeRect(0, 24 * dpr, wallX, groundY - 24 * dpr);
+    // Solid Fixed Base Wall
+    ctx.fillStyle = '#18181b';
+    ctx.strokeStyle = '#3f3f46';
+    ctx.lineWidth = 1 * dpr;
+    ctx.fillRect(0, 25 * dpr, wallX, groundY - 25 * dpr);
+    ctx.strokeRect(0, 25 * dpr, wallX, groundY - 25 * dpr);
 
-    const scale = 75 * dpr;
-    const centerScreenX = w / 2;
+    const scale = 70 * dpr;
+    const centerScreenX = w * 0.52;
     const cartX = centerScreenX + data.actual * scale;
-    const cartW = 54 * dpr;
-    const cartH = 30 * dpr;
-    const cartY = groundY - cartH - 4 * dpr;
+    const cartW = 64 * dpr;
+    const cartH = 34 * dpr;
+    const cartY = groundY - cartH - 3 * dpr;
 
-    // Minimalist Spring (Geometric wire)
+    // Spring (Cyan coil)
     const springStartX = wallX;
     const springEndX = cartX;
-    const springY = cartY + cartH * 0.5;
-    const coils = 10;
+    const springY = cartY + cartH * 0.35;
+    const coils = 12;
     const springLen = springEndX - springStartX;
 
-    ctx.strokeStyle = '#737373';
-    ctx.lineWidth = 1 * dpr;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5 * dpr;
     ctx.beginPath();
     ctx.moveTo(springStartX, springY);
     for (let i = 0; i <= coils; i++) {
       const sx = springStartX + (i / coils) * springLen;
-      const dy = i === 0 || i === coils ? 0 : (i % 2 === 1 ? -6 * dpr : 6 * dpr);
+      const dy = i === 0 || i === coils ? 0 : (i % 2 === 1 ? -7 * dpr : 7 * dpr);
       ctx.lineTo(sx, springY + dy);
     }
     ctx.stroke();
 
-    // Target Setpoint Indicator (Dashed Box)
+    // Damper (Zinc cylinder & rod)
+    const damperY = cartY + cartH * 0.72;
+    const cylinderLen = 42 * dpr;
+    const cylinderW = 10 * dpr;
+    ctx.fillStyle = '#18181b';
+    ctx.strokeStyle = '#52525b';
+    ctx.lineWidth = 1 * dpr;
+    ctx.fillRect(wallX + 8 * dpr, damperY - cylinderW / 2, cylinderLen, cylinderW);
+    ctx.strokeRect(wallX + 8 * dpr, damperY - cylinderW / 2, cylinderLen, cylinderW);
+    ctx.beginPath();
+    ctx.moveTo(wallX + 8 * dpr + cylinderLen * 0.6, damperY);
+    ctx.lineTo(cartX, damperY);
+    ctx.stroke();
+
+    // Target Setpoint Ghost Box (Amber dashed)
     const targetCartX = centerScreenX + data.setpoint * scale;
-    ctx.strokeStyle = '#525252';
-    ctx.setLineDash([2 * dpr, 2 * dpr]);
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
+    ctx.lineWidth = 1 * dpr;
     ctx.strokeRect(targetCartX, cartY, cartW, cartH);
     ctx.setLineDash([]);
 
-    // Cart Body (Crisp Monochrome Box)
-    ctx.fillStyle = '#000000';
-    ctx.strokeStyle = '#ffffff';
+    // Cart Body (Sleek dark block with Cyan accent border)
+    ctx.fillStyle = '#121215';
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.5 * dpr;
-    ctx.fillRect(cartX, cartY, cartW, cartH);
-    ctx.strokeRect(cartX, cartY, cartW, cartH);
+    ctx.beginPath();
+    ctx.roundRect(cartX, cartY, cartW, cartH, 4 * dpr);
+    ctx.fill();
+    ctx.stroke();
 
-    // Linear bearings / sliders under cart
-    ctx.fillStyle = '#737373';
-    ctx.fillRect(cartX + 8 * dpr, groundY - 3 * dpr, 8 * dpr, 3 * dpr);
-    ctx.fillRect(cartX + cartW - 16 * dpr, groundY - 3 * dpr, 8 * dpr, 3 * dpr);
+    // Cart Bearing pads
+    ctx.fillStyle = '#52525b';
+    ctx.fillRect(cartX + 8 * dpr, groundY - 3 * dpr, 10 * dpr, 3 * dpr);
+    ctx.fillRect(cartX + cartW - 18 * dpr, groundY - 3 * dpr, 10 * dpr, 3 * dpr);
 
-    // Telemetry HUD
-    ctx.fillStyle = '#525252';
-    ctx.font = `${9 * dpr}px ui-monospace, monospace`;
+    // Control Force Vector Arrow
+    if (Math.abs(data.u) > 0.1) {
+      const arrowLen = Math.max(Math.min(data.u * 3 * dpr, 50 * dpr), -50 * dpr);
+      const startX = cartX + cartW / 2;
+      const startY = cartY + cartH / 2;
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(startX + arrowLen, startY);
+      ctx.stroke();
+    }
+
+    // HUD Telemetry
+    ctx.font = `${9.5 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.fillStyle = '#71717a';
     ctx.textAlign = 'left';
-    ctx.fillText('PLANT: MASS-SPRING-DAMPER', 12 * dpr, 16 * dpr);
-    ctx.fillText(`POSITION: ${data.actual.toFixed(3)} M (TARGET: ${data.setpoint.toFixed(2)} M)`, 12 * dpr, 28 * dpr);
+    ctx.fillText('PLANT: MASS-SPRING-DAMPER (CART)', 16 * dpr, 20 * dpr);
+    ctx.fillText(`POSITION: ${data.actual.toFixed(3)} m`, 16 * dpr, 36 * dpr);
+    ctx.fillText(`TARGET: ${data.setpoint.toFixed(2)} m`, 16 * dpr, 52 * dpr);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`VELOCITY: ${data.velocity.toFixed(3)} M/S`, w - 12 * dpr, 16 * dpr);
-    ctx.fillText(`CONTROL_U: ${data.u.toFixed(2)} N`, w - 12 * dpr, 28 * dpr);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(`VELOCITY: ${data.velocity.toFixed(3)} m/s`, w - 16 * dpr, 20 * dpr);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillText(`FORCE u: ${data.u.toFixed(2)} N`, w - 16 * dpr, 36 * dpr);
   }
 }

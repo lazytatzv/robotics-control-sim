@@ -13,7 +13,7 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: 'SCOPE 01 // TIME RESPONSE [ r(t) vs y(t) ]',
+        title: 'SCOPE 01 // TIME RESPONSE [ SETPOINT r(t) vs OUTPUT y(t) ]',
       });
     }
   }, []);
@@ -29,8 +29,8 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: 'TARGET r(t)', color: '#525252', getValue: (d) => d.setpoint, dashed: true, lineWidth: 1 },
-        { name: 'OUTPUT y(t)', color: '#ffffff', getValue: (d) => d.actual, lineWidth: 1.5 },
+        { name: 'r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true, lineWidth: 1.2 },
+        { name: 'y(t)', color: '#38bdf8', getValue: (d) => d.actual, lineWidth: 2 },
       ]);
     }
   }, [history]);
