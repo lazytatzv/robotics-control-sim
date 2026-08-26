@@ -56,10 +56,10 @@ export const MetricsBar: React.FC<MetricsBarProps> = React.memo(({
           onClick={hasSnapshot ? onClearSnapshot : onCaptureSnapshot}
           title="Ghost trace comparison overlay"
         >
-          {hasSnapshot ? '✕ CLEAR A/B' : '📸 CAPTURE A/B'}
+          {hasSnapshot ? 'CLEAR A/B' : 'CAPTURE A/B'}
         </button>
         <button className="btn-action-mini" onClick={onExportCsv} title="Download CSV for MATLAB / Python">
-          💾 CSV EXPORT
+          EXPORT CSV
         </button>
       </div>
     </div>

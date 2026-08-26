@@ -962,19 +962,19 @@ export const PidControls: React.FC<PidControlsProps> = React.memo(({
 
           <div className="button-grid" style={{ gridTemplateColumns: '1fr' }}>
             <button className="btn-mono" onClick={() => onAutoTune('pole_smooth')}>
-              🎯 POLE PLACEMENT (CRITICALLY DAMPED ζ=1.0)
+              POLE PLACEMENT (CRITICALLY DAMPED ζ=1.0)
             </button>
             <button className="btn-mono" onClick={() => onAutoTune('pole_fast')}>
-              ⚡ POLE PLACEMENT (FAST BUTTERWORTH ζ=0.707)
+              POLE PLACEMENT (FAST BUTTERWORTH ζ=0.707)
             </button>
             <button className="btn-mono" onClick={() => onAutoTune('chr0')}>
-              📐 CHIEN-HRONES-RESWICK (0% OVERSHOOT)
+              CHIEN-HRONES-RESWICK (0% OVERSHOOT)
             </button>
             <button className="btn-mono" onClick={() => onAutoTune('chr20')}>
-              🚀 CHIEN-HRONES-RESWICK (20% OVERSHOOT)
+              CHIEN-HRONES-RESWICK (20% OVERSHOOT)
             </button>
             <button className="btn-mono" onClick={() => onAutoTune('zn')}>
-              ⚙️ ZIEGLER-NICHOLS (CLASSICAL)
+              ZIEGLER-NICHOLS (CLASSICAL)
             </button>
           </div>
         </div>
