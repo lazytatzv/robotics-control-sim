@@ -65,14 +65,21 @@ export class CanvasPlotter {
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
 
-    const tMin = history[0].t;
-    const tMax = Math.max(history[history.length - 1].t, tMin + 0.1);
+    // Fixed 4.0s oscilloscope window for silky smooth, jitter-free scrolling
+    const windowDuration = 4.0;
+    const tLatest = history[history.length - 1].t;
+    const tMax = Math.max(tLatest, 0.1);
+    const tMin = Math.max(0, tMax - windowDuration);
+    const tSpan = Math.max(tMax - tMin, 0.1);
 
     let yMin = this.options.yMin ?? Infinity;
     let yMax = this.options.yMax ?? -Infinity;
 
     if (this.options.autoScale) {
-      for (const d of history) {
+      // Only scale Y based on visible points in the current time window
+      for (let i = history.length - 1; i >= 0; i--) {
+        const d = history[i];
+        if (d.t < tMin) break;
         for (const s of series) {
           const val = s.getValue(d);
           if (!isNaN(val) && isFinite(val)) {
@@ -82,7 +89,9 @@ export class CanvasPlotter {
         }
       }
       if (baselineHistory) {
-        for (const d of baselineHistory) {
+        for (let i = baselineHistory.length - 1; i >= 0; i--) {
+          const d = baselineHistory[i];
+          if (d.t < tMin) break;
           for (const s of series) {
             const val = s.getValue(d);
             if (!isNaN(val) && isFinite(val)) {
@@ -105,7 +114,7 @@ export class CanvasPlotter {
       yMax += range * 0.08;
     }
 
-    const mapX = (t: number) => padLeft + ((t - tMin) / (tMax - tMin)) * plotW;
+    const mapX = (t: number) => padLeft + ((t - tMin) / tSpan) * plotW;
     const mapY = (val: number) => padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
     // Background Grid
@@ -130,7 +139,7 @@ export class CanvasPlotter {
 
     const xTicks = 4;
     for (let i = 0; i <= xTicks; i++) {
-      const t = tMin + (i / xTicks) * (tMax - tMin);
+      const t = tMin + (i / xTicks) * tSpan;
       const x = mapX(t);
       ctx.beginPath();
       ctx.moveTo(x, padTop);
