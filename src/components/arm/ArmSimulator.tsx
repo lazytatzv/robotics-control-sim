@@ -42,12 +42,12 @@ export const ArmSimulator: React.FC = () => {
     <main>
       <aside className="sidebar card">
         <div className="section-title">
-          <span>2自由度アーム 幾何パラメータ</span>
+          <span>2-DOF Arm Geometry Parameters</span>
         </div>
 
         <div className="form-group">
           <label>
-            リンク1 長さ L1 [m]: <span className="val">{l1.toFixed(1)}</span>
+            Link 1 Length L1 [m]: <span className="val">{l1.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -61,7 +61,7 @@ export const ArmSimulator: React.FC = () => {
 
         <div className="form-group">
           <label>
-            リンク2 長さ L2 [m]: <span className="val">{l2.toFixed(1)}</span>
+            Link 2 Length L2 [m]: <span className="val">{l2.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -74,18 +74,18 @@ export const ArmSimulator: React.FC = () => {
         </div>
 
         <div className="form-group">
-          <label>姿勢解の選択 (Elbow Configuration)</label>
+          <label>Elbow Configuration</label>
           <select
             value={elbowUp ? 'up' : 'down'}
             onChange={(e) => setElbowUp(e.target.value === 'up')}
           >
-            <option value="down">Elbow Down (下肘)</option>
-            <option value="up">Elbow Up (上肘)</option>
+            <option value="down">Elbow Down</option>
+            <option value="up">Elbow Up</option>
           </select>
         </div>
 
         <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          <p>💡 <strong>操作方法:</strong> 右側のキャンバス上でオレンジ色のターゲット点をマウスドラッグ（またはタップ移動）すると、Rust Wasm の逆運動学（IK）ソルバーが関節角度 θ1, θ2 をリアルタイム逆算します。</p>
+          <p>💡 <strong>Usage:</strong> Drag or click the orange target point on the viewport. The Rust WebAssembly Inverse Kinematics (IK) solver computes joint angles θ1, θ2 in real time at 60 FPS.</p>
         </div>
       </aside>
 

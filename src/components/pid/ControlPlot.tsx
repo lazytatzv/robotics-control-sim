@@ -13,7 +13,7 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: '制御入力 u(t) および 各項成分 (P, I, D)',
+        title: 'Control Signal u(t) & Term Breakdown (P, I, D)',
       });
     }
   }, []);
@@ -29,10 +29,10 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: '操作量 u(t)', color: '#ec4899', getValue: (d) => d.u, lineWidth: 2.5 },
-        { name: 'P項', color: '#38bdf8', getValue: (d) => d.p_term, dashed: true, lineWidth: 1.2 },
-        { name: 'I項', color: '#a855f7', getValue: (d) => d.i_term, dashed: true, lineWidth: 1.2 },
-        { name: 'D項', color: '#10b981', getValue: (d) => d.d_term, dashed: true, lineWidth: 1.2 },
+        { name: 'Control u(t)', color: '#ec4899', getValue: (d) => d.u, lineWidth: 2.5 },
+        { name: 'P-term', color: '#38bdf8', getValue: (d) => d.p_term, dashed: true, lineWidth: 1.2 },
+        { name: 'I-term', color: '#a855f7', getValue: (d) => d.i_term, dashed: true, lineWidth: 1.2 },
+        { name: 'D-term', color: '#10b981', getValue: (d) => d.d_term, dashed: true, lineWidth: 1.2 },
       ]);
     }
   }, [history]);

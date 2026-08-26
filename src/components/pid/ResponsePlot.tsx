@@ -13,7 +13,7 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: '時間応答: 目標値 r(t) vs 出力 y(t)',
+        title: 'Time Response: Setpoint r(t) vs Output y(t)',
       });
     }
   }, []);
@@ -29,8 +29,8 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: '目標値 r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true },
-        { name: '現在値 y(t)', color: '#38bdf8', getValue: (d) => d.actual },
+        { name: 'Setpoint r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true },
+        { name: 'Output y(t)', color: '#38bdf8', getValue: (d) => d.actual },
       ]);
     }
   }, [history]);

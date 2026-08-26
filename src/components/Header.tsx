@@ -23,21 +23,21 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab }) => {
           onClick={() => onSelectTab('pid')}
         >
           <Activity style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-          PID 制御
+          PID Control
         </button>
         <button
           className={`tab-btn ${activeTab === 'arm' ? 'active' : ''}`}
           onClick={() => onSelectTab('arm')}
         >
           <Compass style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-          2自由度アーム運動学
+          2-DOF Arm Kinematics
         </button>
         <button
           className={`tab-btn ${activeTab === 'theory' ? 'active' : ''}`}
           onClick={() => onSelectTab('theory')}
         >
           <BookOpen style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-          理論・数式解説
+          Theory & Reference
         </button>
       </nav>
     </header>

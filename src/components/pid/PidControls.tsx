@@ -37,39 +37,39 @@ export const PidControls: React.FC<PidControlsProps> = ({
     <aside className="sidebar card">
       <div>
         <div className="section-title">
-          <span>対象システム (Plant)</span>
+          <span>Target System (Plant)</span>
         </div>
         <div className="form-group">
           <select
             value={state.plantType}
             onChange={(e) => onChange({ plantType: e.target.value as any })}
           >
-            <option value="motor_pos">DCモータ 位置制御 (θ)</option>
-            <option value="motor_velocity">DCモータ 速度制御 (ω)</option>
-            <option value="cart">バネ・マス・ダンパ系 台車 (x)</option>
+            <option value="motor_pos">DC Motor Position Control (θ)</option>
+            <option value="motor_velocity">DC Motor Velocity Control (ω)</option>
+            <option value="cart">Mass-Spring-Damper Cart (x)</option>
           </select>
         </div>
 
         <div className="form-group">
-          <label>プリセット</label>
+          <label>Presets</label>
           <select onChange={(e) => onApplyPreset(e.target.value)} defaultValue="tuned">
-            <option value="tuned">最適調整 (適度な減衰・速い応答)</option>
-            <option value="oscillatory">振動的 (高ゲイン Kp 過大)</option>
-            <option value="sluggish">遅い応答 (低ゲイン P不足)</option>
-            <option value="windup_demo">ワインドアップ発生実験 (飽和 + 過大 I)</option>
-            <option value="ipd_demo">I-PD制御 (キック防止比較)</option>
+            <option value="tuned">Well-Tuned (Fast & Damped)</option>
+            <option value="oscillatory">Oscillatory (High Kp)</option>
+            <option value="sluggish">Sluggish (Low Kp)</option>
+            <option value="windup_demo">Windup Demonstration (Saturation + High Ki)</option>
+            <option value="ipd_demo">I-PD Control (Kick Prevention)</option>
           </select>
         </div>
       </div>
 
       <div>
         <div className="section-title">
-          <span>PID パラメータ</span>
+          <span>PID Parameters</span>
         </div>
 
         <div className="form-group">
           <label>
-            比例ゲイン Kp: <span className="val">{state.kp.toFixed(1)}</span>
+            Proportional Gain Kp: <span className="val">{state.kp.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -83,7 +83,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
         <div className="form-group">
           <label>
-            積分ゲイン Ki: <span className="val">{state.ki.toFixed(1)}</span>
+            Integral Gain Ki: <span className="val">{state.ki.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -97,7 +97,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
         <div className="form-group">
           <label>
-            微分ゲイン Kd: <span className="val">{state.kd.toFixed(2)}</span>
+            Derivative Gain Kd: <span className="val">{state.kd.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -111,7 +111,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
         <div className="form-group">
           <label>
-            微分フィルタ N: <span className="val">{state.filterN.toFixed(0)}</span>
+            Derivative Filter N: <span className="val">{state.filterN.toFixed(0)}</span>
           </label>
           <input
             type="range"
@@ -126,36 +126,36 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
       <div>
         <div className="section-title">
-          <span>制御器構造 & アンチワインドアップ</span>
+          <span>Controller Form & Anti-Windup</span>
         </div>
 
         <div className="form-group">
-          <label>制御器アルゴリズム</label>
+          <label>Algorithm Form</label>
           <select
             value={state.form}
             onChange={(e) => onChange({ form: e.target.value as any })}
           >
-            <option value="standard">標準PID (P, I, D すべて偏差)</option>
-            <option value="pi_d">PI-D (微分先行型: 微分項を測定値から計算)</option>
-            <option value="i_pd">I-PD (比例・微分先行型: P, Dを測定値から計算)</option>
+            <option value="standard">Standard PID (P, I, D on Error)</option>
+            <option value="pi_d">PI-D (Derivative on Measurement)</option>
+            <option value="i_pd">I-PD (Proportional & Derivative on Measurement)</option>
           </select>
         </div>
 
         <div className="form-group">
-          <label>アンチワインドアップ (Anti-Windup)</label>
+          <label>Anti-Windup Method</label>
           <select
             value={state.antiWindup}
             onChange={(e) => onChange({ antiWindup: e.target.value as any })}
           >
-            <option value="clamping">Clamping (条件付き積分停止)</option>
-            <option value="back_calc">Back-calculation (逆計算トラッキング)</option>
-            <option value="none">None (ワインドアップ対策なし)</option>
+            <option value="clamping">Clamping (Conditional Integration)</option>
+            <option value="back_calc">Back-Calculation Tracking</option>
+            <option value="none">None (Unconstrained Windup)</option>
           </select>
         </div>
 
         <div className="form-group">
           <label>
-            操作量 飽和リミット (±Umax): <span className="val">{state.saturation.toFixed(1)}</span>
+            Output Saturation Limit (±Umax): <span className="val">{state.saturation.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -170,12 +170,12 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
       <div>
         <div className="section-title">
-          <span>目標値 & 外乱・ノイズ</span>
+          <span>Setpoint, Disturbance & Noise</span>
         </div>
 
         <div className="form-group">
           <label>
-            目標値 (Setpoint): <span className="val">{state.target.toFixed(2)}</span>
+            Target Setpoint: <span className="val">{state.target.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -189,7 +189,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
         <div className="form-group">
           <label>
-            負荷外乱 (Disturbance): <span className="val">{state.disturbance.toFixed(1)}</span>
+            Load Disturbance: <span className="val">{state.disturbance.toFixed(1)}</span>
           </label>
           <input
             type="range"
@@ -203,7 +203,7 @@ export const PidControls: React.FC<PidControlsProps> = ({
 
         <div className="form-group">
           <label>
-            センサノイズ振幅: <span className="val">{state.noise.toFixed(3)}</span>
+            Sensor Noise Amplitude: <span className="val">{state.noise.toFixed(3)}</span>
           </label>
           <input
             type="range"
@@ -218,18 +218,18 @@ export const PidControls: React.FC<PidControlsProps> = ({
         <div className="btn-row">
           <button className="btn btn-primary" onClick={onStepInput}>
             <Zap style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-            ステップ入力 (反転)
+            Step Input (Invert)
           </button>
           <button className="btn" onClick={onPulseDisturbance}>
             <Flame style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-            瞬間外乱付加
+            Pulse Disturbance
           </button>
         </div>
 
         <div className="btn-row">
           <button className="btn btn-danger" onClick={onReset}>
             <RotateCcw style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-            リセット
+            Reset
           </button>
           <button
             className={`btn ${state.isPaused ? 'btn-active' : ''}`}
@@ -237,11 +237,11 @@ export const PidControls: React.FC<PidControlsProps> = ({
           >
             {state.isPaused ? (
               <>
-                <Play style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> 再開
+                <Play style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> Resume
               </>
             ) : (
               <>
-                <Pause style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> 一時停止
+                <Pause style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> Pause
               </>
             )}
           </button>
