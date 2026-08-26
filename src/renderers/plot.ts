@@ -1,5 +1,13 @@
 import { StepDataPoint } from '../sim-bridge';
 
+export interface PlotSeries {
+  name: string;
+  color: string;
+  getValue: (d: StepDataPoint) => number;
+  dashed?: boolean;
+  lineWidth?: number;
+}
+
 export interface PlotOptions {
   title: string;
   yMin?: number;
@@ -37,13 +45,8 @@ export class CanvasPlotter {
 
   public render(
     history: StepDataPoint[],
-    series: Array<{
-      name: string;
-      color: string;
-      getValue: (d: StepDataPoint) => number;
-      dashed?: boolean;
-      lineWidth?: number;
-    }>
+    series: PlotSeries[],
+    baselineHistory?: StepDataPoint[] | null
   ): void {
     const ctx = this.ctx;
     const dpr = window.devicePixelRatio || 1;
@@ -54,7 +57,7 @@ export class CanvasPlotter {
 
     if (history.length === 0) return;
 
-    const padLeft = 46 * dpr;
+    const padLeft = 48 * dpr;
     const padRight = 16 * dpr;
     const padTop = 26 * dpr;
     const padBottom = 22 * dpr;
@@ -75,6 +78,17 @@ export class CanvasPlotter {
           if (!isNaN(val) && isFinite(val)) {
             if (val < yMin) yMin = val;
             if (val > yMax) yMax = val;
+          }
+        }
+      }
+      if (baselineHistory) {
+        for (const d of baselineHistory) {
+          for (const s of series) {
+            const val = s.getValue(d);
+            if (!isNaN(val) && isFinite(val)) {
+              if (val < yMin) yMin = val;
+              if (val > yMax) yMax = val;
+            }
           }
         }
       }
@@ -139,7 +153,37 @@ export class CanvasPlotter {
       ctx.stroke();
     }
 
-    // Signal Traces
+    // Baseline Ghost Traces (Snapshot comparison)
+    if (baselineHistory && baselineHistory.length > 0) {
+      const bMin = baselineHistory[0].t;
+      const bMax = Math.max(baselineHistory[baselineHistory.length - 1].t, bMin + 0.1);
+      const mapBaseX = (t: number) => padLeft + ((t - bMin) / (bMax - bMin)) * plotW;
+
+      ctx.strokeStyle = 'rgba(161, 161, 170, 0.4)';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([4 * dpr, 4 * dpr]);
+
+      for (const s of series) {
+        if (s.name.startsWith('y(') || s.name.startsWith('u(')) {
+          ctx.beginPath();
+          let first = true;
+          for (const d of baselineHistory) {
+            const x = mapBaseX(d.t);
+            const y = mapY(s.getValue(d));
+            if (first) {
+              ctx.moveTo(x, y);
+              first = false;
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+    }
+
+    // Active Signal Traces
     for (const s of series) {
       ctx.strokeStyle = s.color;
       ctx.lineWidth = (s.lineWidth ?? 1.5) * dpr;

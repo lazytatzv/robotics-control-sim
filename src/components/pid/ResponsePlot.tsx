@@ -4,9 +4,10 @@ import { StepDataPoint } from '../../sim-bridge';
 
 interface ResponsePlotProps {
   history: StepDataPoint[];
+  baselineHistory?: StepDataPoint[] | null;
 }
 
-export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
+export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history, baselineHistory }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const plotterRef = useRef<CanvasPlotter | null>(null);
 
@@ -28,12 +29,16 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
 
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
-      plotterRef.current.render(history, [
-        { name: 'r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true, lineWidth: 1.2 },
-        { name: 'y(t)', color: '#38bdf8', getValue: (d) => d.actual, lineWidth: 2 },
-      ]);
+      plotterRef.current.render(
+        history,
+        [
+          { name: 'r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true, lineWidth: 1.2 },
+          { name: 'y(t)', color: '#38bdf8', getValue: (d) => d.actual, lineWidth: 2 },
+        ],
+        baselineHistory
+      );
     }
-  }, [history]);
+  }, [history, baselineHistory]);
 
   return (
     <div className="canvas-panel canvas-panel-graph">

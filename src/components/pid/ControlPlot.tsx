@@ -4,16 +4,17 @@ import { StepDataPoint } from '../../sim-bridge';
 
 interface ControlPlotProps {
   history: StepDataPoint[];
+  baselineHistory?: StepDataPoint[] | null;
 }
 
-export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
+export const ControlPlot: React.FC<ControlPlotProps> = ({ history, baselineHistory }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const plotterRef = useRef<CanvasPlotter | null>(null);
 
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: 'SCOPE 02 // CONTROL SIGNAL u(t) & DECOMPOSITION (P, I, D)',
+        title: 'SCOPE 02 // CONTROL SIGNAL u(t) & DECOMPOSITION (P, I, D, FF)',
       });
     }
   }, []);
@@ -28,14 +29,19 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
 
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
-      plotterRef.current.render(history, [
-        { name: 'u(t)', color: '#f43f5e', getValue: (d) => d.u, lineWidth: 2 },
-        { name: 'P', color: '#60a5fa', getValue: (d) => d.p_term, dashed: true, lineWidth: 1 },
-        { name: 'I', color: '#c084fc', getValue: (d) => d.i_term, dashed: true, lineWidth: 1 },
-        { name: 'D', color: '#34d399', getValue: (d) => d.d_term, dashed: true, lineWidth: 1 },
-      ]);
+      plotterRef.current.render(
+        history,
+        [
+          { name: 'u(t)', color: '#f43f5e', getValue: (d) => d.u, lineWidth: 2 },
+          { name: 'P', color: '#60a5fa', getValue: (d) => d.p_term, dashed: true, lineWidth: 1 },
+          { name: 'I', color: '#c084fc', getValue: (d) => d.i_term, dashed: true, lineWidth: 1 },
+          { name: 'D', color: '#34d399', getValue: (d) => d.d_term, dashed: true, lineWidth: 1 },
+          { name: 'FF', color: '#fbbf24', getValue: (d) => d.ff_term || 0, dashed: true, lineWidth: 1 },
+        ],
+        baselineHistory
+      );
     }
-  }, [history]);
+  }, [history, baselineHistory]);
 
   return (
     <div className="canvas-panel canvas-panel-graph">

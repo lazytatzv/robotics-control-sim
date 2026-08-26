@@ -23,6 +23,8 @@ pub struct DcMotorParams {
     pub l: f64,
     /// Coulomb friction torque [N*m]
     pub coulomb_friction: f64,
+    /// Gear reduction ratio (e.g. 1.0 for direct drive, 10.0 for 10:1 reduction)
+    pub gear_ratio: f64,
 }
 
 impl Default for DcMotorParams {
@@ -35,12 +37,13 @@ impl Default for DcMotorParams {
             r: 1.0,
             l: 0.005,
             coulomb_friction: 0.001,
+            gear_ratio: 1.0,
         }
     }
 }
 
 /// DC Motor Physical Plant
-/// State: [theta (rad), omega (rad/s), current (A)]
+/// State: [rotor_theta (rad), rotor_omega (rad/s), current (A)]
 #[derive(Debug, Clone)]
 pub struct DcMotorPlant {
     pub params: DcMotorParams,
@@ -59,15 +62,19 @@ impl DcMotorPlant {
         self.state = [0.0, 0.0, 0.0];
     }
 
-    /// Step simulation with input voltage u [V] and external disturbance torque tau_dist [N*m]
+    /// Step simulation with input voltage u [V] and external disturbance torque tau_dist [N*m] at output shaft
     pub fn step(&mut self, voltage: f64, tau_dist: f64, dt: f64) {
         let p = &self.params;
+        let n_gear = p.gear_ratio.max(1e-4);
+        // Disturbance reflected to motor rotor shaft: tau_dist_rotor = tau_dist / N
+        let tau_dist_rotor = tau_dist / n_gear;
+
         let ode = |_t: f64, x: &[f64; 3], v: f64| -> [f64; 3] {
             let _theta = x[0];
             let omega = x[1];
             let current = x[2];
 
-            // Coulomb friction
+            // Coulomb friction on rotor
             let friction_coulomb = if omega.abs() > 1e-4 {
                 p.coulomb_friction * omega.signum()
             } else {
@@ -77,9 +84,9 @@ impl DcMotorPlant {
             // d(theta)/dt = omega
             let d_theta = omega;
 
-            // d(omega)/dt = (Kt * current - B * omega - friction_coulomb - tau_dist) / J
+            // d(omega)/dt = (Kt * current - B * omega - friction_coulomb - tau_dist_rotor) / J
             let torque_motor = p.kt * current;
-            let d_omega = (torque_motor - p.b * omega - friction_coulomb - tau_dist) / p.j;
+            let d_omega = (torque_motor - p.b * omega - friction_coulomb - tau_dist_rotor) / p.j;
 
             // d(current)/dt = (V - R * current - Ke * omega) / L
             let d_current = if p.l > 1e-6 {
@@ -99,8 +106,13 @@ impl DcMotorPlant {
             let ode_mech = |_t: f64, x: &[f64; 2], v: f64| -> [f64; 2] {
                 let omega = x[1];
                 let i = (v - p.ke * omega) / p.r;
+                let friction_coulomb = if omega.abs() > 1e-4 {
+                    p.coulomb_friction * omega.signum()
+                } else {
+                    0.0
+                };
                 let d_theta = omega;
-                let d_omega = (p.kt * i - p.b * omega - tau_dist) / p.j;
+                let d_omega = (p.kt * i - p.b * omega - friction_coulomb - tau_dist_rotor) / p.j;
                 [d_theta, d_omega]
             };
             let mech_state = [self.state[0], self.state[1]];
@@ -110,14 +122,17 @@ impl DcMotorPlant {
         }
     }
 
+    /// Output shaft angle [rad]
     pub fn angle(&self) -> f64 {
-        self.state[0]
+        self.state[0] / self.params.gear_ratio.max(1e-4)
     }
 
+    /// Output shaft velocity [rad/s]
     pub fn velocity(&self) -> f64 {
-        self.state[1]
+        self.state[1] / self.params.gear_ratio.max(1e-4)
     }
 
+    /// Rotor current [A]
     pub fn current(&self) -> f64 {
         self.state[2]
     }
@@ -181,7 +196,7 @@ impl MassSpringDamperPlant {
             };
 
             let d_pos = vel;
-            let d_vel = (f_total - p.damping * vel - p.stiffness * pos - f_fric) / p.mass;
+            let d_vel = (f_total - p.damping * vel - p.stiffness * pos - f_fric) / p.mass.max(1e-4);
 
             [d_pos, d_vel]
         };
@@ -197,3 +212,4 @@ impl MassSpringDamperPlant {
         self.state[1]
     }
 }
+

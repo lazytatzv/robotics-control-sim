@@ -240,55 +240,111 @@ select:focus {
   background: #e5e5e5;
 }
 
-/* Viewport & Telemetry */
-.viewport-deck {
+/* Section Sub-Tabs */
+.section-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
   background: var(--bg-black);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  margin-bottom: 0.25rem;
 }
 
+.tab-btn-sub {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 0.35rem 0.2rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 2px;
+  text-align: center;
+  transition: all 0.1s ease;
+}
+
+.tab-btn-sub:hover {
+  color: var(--text-muted);
+}
+
+.tab-btn-sub.active {
+  background: var(--bg-surface-3);
+  color: var(--text-pure);
+  border: 1px solid var(--border-focus);
+}
+
+.param-input-num {
+  background: var(--bg-black);
+  border: 1px solid var(--border-light);
+  color: var(--text-pure);
+  padding: 0.15rem 0.35rem;
+  font-size: 0.68rem;
+  width: 58px;
+  text-align: right;
+  border-radius: 2px;
+  outline: none;
+}
+
+.param-input-num:focus {
+  border-color: var(--text-pure);
+}
+
+/* Telemetry Actions & Badges */
 .telemetry-strip {
   background: var(--bg-surface-1);
   padding: 0.6rem 1.25rem;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(5, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
   border-bottom: 1px solid var(--border-light);
 }
 
-.telemetry-item {
+.telemetry-actions {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 0.4rem;
+  align-items: center;
 }
 
-.telemetry-title {
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.btn-action-mini {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
 }
 
-.telemetry-data {
-  font-size: 0.95rem;
-  font-weight: 700;
+.btn-action-mini:hover {
+  background: var(--bg-surface-3);
   color: var(--text-pure);
+  border-color: var(--border-focus);
 }
 
-.canvas-panel {
-  background: var(--bg-black);
-  position: relative;
-  width: 100%;
-  border-bottom: 1px solid var(--border-light);
+.btn-action-mini.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
 }
 
 .canvas-panel-machinery {
-  height: 190px;
+  height: 180px;
 }
 
 .canvas-panel-graph {
-  height: 220px;
+  height: 200px;
+}
+
+.canvas-panel-bode {
+  height: 380px;
 }
 
 /* Reference Guide */

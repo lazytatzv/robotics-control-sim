@@ -1,4 +1,8 @@
 use control_core::{
+    analysis::{
+        compute_bode_analysis, eval_motor_position_tf, eval_motor_velocity_tf, eval_msd_tf,
+        tune_dc_motor, AutoTuneMethod,
+    },
     AntiWindupMethod, DcMotorParams, DcMotorPlant, MassSpringDamperParams, MassSpringDamperPlant,
     PidConfig, PidController, PidForm, Planar2LinkArm,
 };
@@ -16,18 +20,9 @@ pub struct StepDataPoint {
     pub p_term: f64,
     pub i_term: f64,
     pub d_term: f64,
+    pub ff_term: f64,
     pub is_saturated: bool,
     pub current: f64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct Metrics {
-    pub rise_time: Option<f64>,
-    pub overshoot_percent: f64,
-    pub settling_time: Option<f64>,
-    pub steady_state_error: f64,
-    pub peak_value: f64,
-    pub is_stable: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
@@ -89,20 +84,56 @@ impl Simulator {
         let form = match form_str {
             "pi_d" => PidForm::DerivativeOnMeasurement,
             "i_pd" => PidForm::IPD,
+            "2dof" => PidForm::TwoDegreeOfFreedom,
             _ => PidForm::Standard,
         };
 
-        self.pid.config = PidConfig {
+        self.pid.config.kp = kp;
+        self.pid.config.ki = ki;
+        self.pid.config.kd = kd;
+        self.pid.config.filter_n = filter_n;
+        self.pid.config.min_output = min_output;
+        self.pid.config.max_output = max_output;
+        self.pid.config.anti_windup = anti_windup;
+        self.pid.config.kb = kb;
+        self.pid.config.form = form;
+    }
+
+    pub fn configure_pid_advanced(
+        &mut self,
+        kp: f64,
+        ki: f64,
+        kd: f64,
+        filter_n: f64,
+        min_output: f64,
+        max_output: f64,
+        anti_windup_str: &str,
+        form_str: &str,
+        kb: f64,
+        setpoint_weight_b: f64,
+        setpoint_weight_c: f64,
+        kvff: f64,
+        kaff: f64,
+        k_friction: f64,
+        deadband: f64,
+    ) {
+        self.configure_pid(
             kp,
             ki,
             kd,
             filter_n,
             min_output,
             max_output,
-            anti_windup,
+            anti_windup_str,
+            form_str,
             kb,
-            form,
-        };
+        );
+        self.pid.config.setpoint_weight_b = setpoint_weight_b;
+        self.pid.config.setpoint_weight_c = setpoint_weight_c;
+        self.pid.config.kvff = kvff;
+        self.pid.config.kaff = kaff;
+        self.pid.config.k_friction = k_friction;
+        self.pid.config.deadband = deadband;
     }
 
     pub fn configure_motor(
@@ -114,6 +145,7 @@ impl Simulator {
         r: f64,
         l: f64,
         coulomb_friction: f64,
+        gear_ratio: f64,
     ) {
         self.motor.params = DcMotorParams {
             j,
@@ -123,6 +155,16 @@ impl Simulator {
             r,
             l,
             coulomb_friction,
+            gear_ratio,
+        };
+    }
+
+    pub fn configure_msd(&mut self, mass: f64, damping: f64, stiffness: f64, friction: f64) {
+        self.msd.params = MassSpringDamperParams {
+            mass,
+            damping,
+            stiffness,
+            friction,
         };
     }
 
@@ -181,6 +223,7 @@ impl Simulator {
             p_term: pid_out.p_term,
             i_term: pid_out.i_term,
             d_term: pid_out.d_term,
+            ff_term: pid_out.ff_term,
             is_saturated: pid_out.is_saturated,
             current: self.motor.current(),
         };
@@ -188,7 +231,7 @@ impl Simulator {
         serde_wasm_bindgen::to_value(&data).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
-    /// Simulate full trajectory instantly in Rust (e.g. 5~10s step response)
+    /// Simulate full trajectory instantly in Rust
     pub fn run_batch(
         &mut self,
         duration: f64,
@@ -248,12 +291,47 @@ impl Simulator {
                 p_term: pid_out.p_term,
                 i_term: pid_out.i_term,
                 d_term: pid_out.d_term,
+                ff_term: pid_out.ff_term,
                 is_saturated: pid_out.is_saturated,
                 current: self.motor.current(),
             });
         }
 
         serde_wasm_bindgen::to_value(&history).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Compute frequency response Bode analysis
+    pub fn get_bode_analysis(&self) -> Result<JsValue, JsValue> {
+        let motor_p = self.motor.params.clone();
+        let msd_p = self.msd.params.clone();
+
+        let analysis = match self.plant_type {
+            PlantType::DcMotorPosition => {
+                compute_bode_analysis(|w| eval_motor_position_tf(&motor_p, w), &self.pid.config)
+            }
+            PlantType::DcMotorVelocity => {
+                compute_bode_analysis(|w| eval_motor_velocity_tf(&motor_p, w), &self.pid.config)
+            }
+            PlantType::MassSpringDamper => {
+                compute_bode_analysis(|w| eval_msd_tf(&msd_p, w), &self.pid.config)
+            }
+        };
+
+        serde_wasm_bindgen::to_value(&analysis).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Compute suggested gains from Auto-Tuning algorithms
+    pub fn get_auto_tuned_gains(&self, method_str: &str) -> Result<JsValue, JsValue> {
+        let method = match method_str {
+            "chr0" => AutoTuneMethod::ChienHronesReswick0,
+            "chr20" => AutoTuneMethod::ChienHronesReswick20,
+            "pole_fast" => AutoTuneMethod::PolePlacementFast,
+            "pole_smooth" => AutoTuneMethod::PolePlacementSmooth,
+            _ => AutoTuneMethod::ZieglerNichols,
+        };
+
+        let tuned = tune_dc_motor(&self.motor.params, method);
+        serde_wasm_bindgen::to_value(&tuned).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
 

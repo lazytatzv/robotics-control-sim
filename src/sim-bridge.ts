@@ -10,6 +10,7 @@ export interface StepDataPoint {
   p_term: number;
   i_term: number;
   d_term: number;
+  ff_term: number;
   is_saturated: boolean;
   current: number;
 }
@@ -22,8 +23,14 @@ export interface PidSettings {
   min_output: number;
   max_output: number;
   anti_windup: 'clamping' | 'back_calc' | 'none';
-  form: 'standard' | 'pi_d' | 'i_pd';
+  form: 'standard' | 'pi_d' | 'i_pd' | '2dof';
   kb: number;
+  setpoint_weight_b: number;
+  setpoint_weight_c: number;
+  kvff: number;
+  kaff: number;
+  k_friction: number;
+  deadband: number;
 }
 
 export interface MotorSettings {
@@ -34,6 +41,39 @@ export interface MotorSettings {
   r: number;
   l: number;
   coulomb_friction: number;
+  gear_ratio: number;
+}
+
+export interface MsdSettings {
+  mass: number;
+  damping: number;
+  stiffness: number;
+  friction: number;
+}
+
+export interface BodePoint {
+  omega: number;
+  mag_db: number;
+  phase_deg: number;
+  closed_loop_mag_db: number;
+}
+
+export interface BodeAnalysis {
+  points: BodePoint[];
+  gain_crossover_freq?: number;
+  phase_margin_deg?: number;
+  phase_crossover_freq?: number;
+  gain_margin_db?: number;
+  is_stable: boolean;
+  bandwidth?: number;
+}
+
+export interface TunedGains {
+  kp: number;
+  ki: number;
+  kd: number;
+  filter_n: number;
+  method_name: string;
 }
 
 let isInitialized = false;
