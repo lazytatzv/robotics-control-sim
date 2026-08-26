@@ -41,13 +41,14 @@ export const ArmSimulator: React.FC = () => {
   return (
     <main>
       <aside className="sidebar">
-        <div className="control-section">
-          <div className="section-label">Geometry Parameters</div>
+        <div className="control-block">
+          <div className="block-header">01 // ARM GEOMETRY</div>
 
-          <div className="form-group">
-            <label>
-              Link 1 (L1) <span className="val">{l1.toFixed(1)} m</span>
-            </label>
+          <div className="param-row">
+            <div className="param-label">
+              <span>LINK 1 (L1)</span>
+              <span className="param-value">{l1.toFixed(1)} M</span>
+            </div>
             <input
               type="range"
               min="0.5"
@@ -58,10 +59,11 @@ export const ArmSimulator: React.FC = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>
-              Link 2 (L2) <span className="val">{l2.toFixed(1)} m</span>
-            </label>
+          <div className="param-row">
+            <div className="param-label">
+              <span>LINK 2 (L2)</span>
+              <span className="param-value">{l2.toFixed(1)} M</span>
+            </div>
             <input
               type="range"
               min="0.5"
@@ -72,25 +74,25 @@ export const ArmSimulator: React.FC = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label>Elbow Solution</label>
+          <div className="param-row">
+            <div className="param-label"><span>ELBOW CONFIGURATION</span></div>
             <select
               value={elbowUp ? 'up' : 'down'}
               onChange={(e) => setElbowUp(e.target.value === 'up')}
             >
-              <option value="down">Elbow Down</option>
-              <option value="up">Elbow Up</option>
+              <option value="down">ELBOW DOWN</option>
+              <option value="up">ELBOW UP</option>
             </select>
           </div>
 
-          <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-            Drag the amber target crosshair on the viewport to solve inverse kinematics in real time via Rust WebAssembly.
+          <div style={{ marginTop: '0.5rem', fontSize: '0.68rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+            Drag the crosshair on the viewport to solve inverse kinematics in real time via Rust WebAssembly.
           </div>
         </div>
       </aside>
 
       <section className="viewport-deck">
-        <div className="canvas-panel" style={{ height: 'calc(100vh - 49px)' }}>
+        <div className="canvas-panel" style={{ height: 'calc(100vh - 45px)' }}>
           <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
         </div>
       </section>

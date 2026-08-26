@@ -13,24 +13,22 @@ interface MetricsBarProps {
 
 export const MetricsBar: React.FC<MetricsBarProps> = ({ metrics }) => {
   return (
-    <div className="telemetry-bar">
-      <div className="telemetry-cell">
-        <span className="telemetry-label">Rise Time (tr)</span>
-        <span className="telemetry-val">{metrics.riseTime}</span>
+    <div className="telemetry-strip">
+      <div className="telemetry-item">
+        <span className="telemetry-title">RISE_TIME (tr)</span>
+        <span className="telemetry-data">{metrics.riseTime}</span>
       </div>
-      <div className="telemetry-cell">
-        <span className="telemetry-label">Overshoot (Mp)</span>
-        <span className="telemetry-val" style={{ color: metrics.overshoot !== '0.0 %' ? '#f59e0b' : '#f4f4f5' }}>
-          {metrics.overshoot}
-        </span>
+      <div className="telemetry-item">
+        <span className="telemetry-title">OVERSHOOT (Mp)</span>
+        <span className="telemetry-data">{metrics.overshoot}</span>
       </div>
-      <div className="telemetry-cell">
-        <span className="telemetry-label">Settling Time (ts)</span>
-        <span className="telemetry-val">{metrics.settlingTime}</span>
+      <div className="telemetry-item">
+        <span className="telemetry-title">SETTLING_TIME (ts)</span>
+        <span className="telemetry-data">{metrics.settlingTime}</span>
       </div>
-      <div className="telemetry-cell">
-        <span className="telemetry-label">Steady Error (ess)</span>
-        <span className="telemetry-val">{metrics.steadyStateError}</span>
+      <div className="telemetry-item">
+        <span className="telemetry-title">STEADY_ERROR (ess)</span>
+        <span className="telemetry-data">{metrics.steadyStateError}</span>
       </div>
     </div>
   );

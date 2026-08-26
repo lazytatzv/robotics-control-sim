@@ -93,13 +93,12 @@ export class ArmRenderer {
     const cy = h * 0.8;
     const scale = 110 * dpr;
 
-    // Reach envelope
+    // Reach boundary circles
     const maxReach = (this.l1 + this.l2) * scale;
     const minReach = Math.abs(this.l1 - this.l2) * scale;
 
-    ctx.strokeStyle = '#27272a';
+    ctx.strokeStyle = '#181818';
     ctx.lineWidth = 1 * dpr;
-    ctx.setLineDash([3 * dpr, 3 * dpr]);
     ctx.beginPath();
     ctx.arc(cx, cy, maxReach, 0, Math.PI * 2);
     ctx.stroke();
@@ -108,7 +107,6 @@ export class ArmRenderer {
       ctx.arc(cx, cy, minReach, 0, Math.PI * 2);
       ctx.stroke();
     }
-    ctx.setLineDash([]);
 
     const ikResult = arm2_ik(this.l1, this.l2, this.targetX, this.targetY, this.elbowUp) as [number, number] | undefined;
     const reachable = ikResult !== undefined && ikResult !== null;
@@ -131,68 +129,65 @@ export class ArmRenderer {
     const eeScr = { x: cx + eeX * scale, y: cy - eeY * scale };
     const targetScr = { x: cx + this.targetX * scale, y: cy - this.targetY * scale };
 
-    // Base pedestal
-    ctx.fillStyle = '#18181b';
-    ctx.strokeStyle = '#3f3f46';
-    ctx.lineWidth = 1.5 * dpr;
-    ctx.fillRect(cx - 25 * dpr, cy, 50 * dpr, 14 * dpr);
-    ctx.strokeRect(cx - 25 * dpr, cy, 50 * dpr, 14 * dpr);
+    // Base Support
+    ctx.fillStyle = '#121212';
+    ctx.strokeStyle = '#333333';
+    ctx.strokeRect(cx - 20 * dpr, cy, 40 * dpr, 10 * dpr);
 
-    // Link 1
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 5 * dpr;
-    ctx.lineCap = 'round';
+    // Link 1 (Solid White)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3 * dpr;
     ctx.beginPath();
     ctx.moveTo(baseScr.x, baseScr.y);
     ctx.lineTo(elbowScr.x, elbowScr.y);
     ctx.stroke();
 
-    // Link 2
-    ctx.strokeStyle = '#818cf8';
-    ctx.lineWidth = 4 * dpr;
+    // Link 2 (Solid White)
+    ctx.strokeStyle = '#d4d4d4';
+    ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
     ctx.moveTo(elbowScr.x, elbowScr.y);
     ctx.lineTo(eeScr.x, eeScr.y);
     ctx.stroke();
 
     // Joints
-    ctx.fillStyle = '#09090b';
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2 * dpr;
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5 * dpr;
     ctx.beginPath();
-    ctx.arc(baseScr.x, baseScr.y, 6 * dpr, 0, Math.PI * 2);
+    ctx.arc(baseScr.x, baseScr.y, 4 * dpr, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    ctx.strokeStyle = '#818cf8';
     ctx.beginPath();
-    ctx.arc(elbowScr.x, elbowScr.y, 5 * dpr, 0, Math.PI * 2);
+    ctx.arc(elbowScr.x, elbowScr.y, 4 * dpr, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     // End Effector
-    ctx.fillStyle = reachable ? '#22c55e' : '#ef4444';
-    ctx.beginPath();
-    ctx.arc(eeScr.x, eeScr.y, 4 * dpr, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = reachable ? '#ffffff' : '#525252';
+    ctx.fillRect(eeScr.x - 3 * dpr, eeScr.y - 3 * dpr, 6 * dpr, 6 * dpr);
 
-    // Target crosshair
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 1.5 * dpr;
+    // Target Crosshair
+    ctx.strokeStyle = '#737373';
+    ctx.lineWidth = 1 * dpr;
     ctx.beginPath();
-    ctx.arc(targetScr.x, targetScr.y, 8 * dpr, 0, Math.PI * 2);
+    ctx.moveTo(targetScr.x - 8 * dpr, targetScr.y);
+    ctx.lineTo(targetScr.x + 8 * dpr, targetScr.y);
+    ctx.moveTo(targetScr.x, targetScr.y - 8 * dpr);
+    ctx.lineTo(targetScr.x, targetScr.y + 8 * dpr);
     ctx.stroke();
 
-    // HUD Telemetry
-    ctx.fillStyle = '#71717a';
-    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+    // Telemetry HUD
+    ctx.fillStyle = '#525252';
+    ctx.font = `${9 * dpr}px ui-monospace, monospace`;
     ctx.textAlign = 'left';
-    ctx.fillText(`TARGET: (${this.targetX.toFixed(2)}, ${this.targetY.toFixed(2)}) m`, 12 * dpr, 16 * dpr);
-    ctx.fillText(`STATUS: ${reachable ? 'REACHABLE' : 'SINGULARITY / OUT OF REACH'}`, 12 * dpr, 30 * dpr);
+    ctx.fillText(`TARGET: [X=${this.targetX.toFixed(2)}, Y=${this.targetY.toFixed(2)}]`, 12 * dpr, 16 * dpr);
+    ctx.fillText(`STATUS: ${reachable ? 'VALID_SOLUTION' : 'SINGULARITY / UNREACHABLE'}`, 12 * dpr, 28 * dpr);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`THETA-1: ${((theta1 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 16 * dpr);
-    ctx.fillText(`THETA-2: ${((theta2 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 30 * dpr);
+    ctx.fillText(`THETA_1: ${((theta1 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 16 * dpr);
+    ctx.fillText(`THETA_2: ${((theta2 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 28 * dpr);
 
     return {
       theta1Deg: (theta1 * 180) / Math.PI,

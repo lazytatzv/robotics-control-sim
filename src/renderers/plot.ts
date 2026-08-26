@@ -54,10 +54,10 @@ export class CanvasPlotter {
 
     if (history.length === 0) return;
 
-    const padLeft = 45 * dpr;
+    const padLeft = 40 * dpr;
     const padRight = 16 * dpr;
-    const padTop = 26 * dpr;
-    const padBottom = 22 * dpr;
+    const padTop = 24 * dpr;
+    const padBottom = 20 * dpr;
 
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
@@ -94,11 +94,11 @@ export class CanvasPlotter {
     const mapX = (t: number) => padLeft + ((t - tMin) / (tMax - tMin)) * plotW;
     const mapY = (val: number) => padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
-    // Grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    // Grid ticks
+    ctx.strokeStyle = '#181818';
     ctx.lineWidth = 1 * dpr;
-    ctx.fillStyle = '#52525b';
-    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.fillStyle = '#404040';
+    ctx.font = `${8.5 * dpr}px ui-monospace, monospace`;
 
     const yTicks = 4;
     for (let i = 0; i <= yTicks; i++) {
@@ -128,10 +128,10 @@ export class CanvasPlotter {
       ctx.fillText(`${t.toFixed(1)}s`, x, padTop + plotH + 4 * dpr);
     }
 
-    // Zero axis
+    // Zero axis line
     if (this.options.showZeroLine && yMin <= 0 && yMax >= 0) {
       const yZero = mapY(0);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.strokeStyle = '#262626';
       ctx.lineWidth = 1 * dpr;
       ctx.beginPath();
       ctx.moveTo(padLeft, yZero);
@@ -139,7 +139,7 @@ export class CanvasPlotter {
       ctx.stroke();
     }
 
-    // Draw lines
+    // Traces
     for (const s of series) {
       ctx.strokeStyle = s.color;
       ctx.lineWidth = (s.lineWidth ?? 1.5) * dpr;
@@ -165,16 +165,16 @@ export class CanvasPlotter {
     }
     ctx.setLineDash([]);
 
-    // Title HUD
-    ctx.fillStyle = '#71717a';
-    ctx.font = `600 ${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+    // Title
+    ctx.fillStyle = '#525252';
+    ctx.font = `700 ${8.5 * dpr}px ui-monospace, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(this.options.title, padLeft, 8 * dpr);
+    ctx.fillText(this.options.title, padLeft, 6 * dpr);
 
     // Legend
     let legendX = w - padRight;
-    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
+    ctx.font = `${8.5 * dpr}px ui-monospace, monospace`;
     ctx.textAlign = 'right';
     for (let i = series.length - 1; i >= 0; i--) {
       const s = series[i];
@@ -182,7 +182,7 @@ export class CanvasPlotter {
       const label = `${s.name}: ${latestVal}`;
       
       ctx.fillStyle = s.color;
-      ctx.fillText(label, legendX, 8 * dpr);
+      ctx.fillText(label, legendX, 6 * dpr);
       legendX -= (ctx.measureText(label).width + 12 * dpr);
     }
   }

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Sliders, GitFork, FileText } from 'lucide-react';
 
 export type TabId = 'pid' | 'arm' | 'theory';
 
@@ -11,9 +10,9 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab }) => {
   return (
     <header>
-      <div className="logo-area">
-        <span className="brand-title">Control Lab</span>
-        <span className="badge-wasm">WASM · RK4</span>
+      <div className="brand-area">
+        <span className="brand-logo">LORE · SIM</span>
+        <span className="brand-tag">RUST / WASM RK4</span>
       </div>
 
       <nav className="nav-tabs">
@@ -21,22 +20,19 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab }) => {
           className={`tab-btn ${activeTab === 'pid' ? 'active' : ''}`}
           onClick={() => onSelectTab('pid')}
         >
-          <Sliders size={13} />
-          PID Control
+          [01] PID CONTROL
         </button>
         <button
           className={`tab-btn ${activeTab === 'arm' ? 'active' : ''}`}
           onClick={() => onSelectTab('arm')}
         >
-          <GitFork size={13} />
-          Kinematics (2-DOF)
+          [02] 2-DOF KINEMATICS
         </button>
         <button
           className={`tab-btn ${activeTab === 'theory' ? 'active' : ''}`}
           onClick={() => onSelectTab('theory')}
         >
-          <FileText size={13} />
-          Reference
+          [03] REFERENCE
         </button>
       </nav>
     </header>

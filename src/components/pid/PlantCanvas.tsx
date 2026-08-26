@@ -36,7 +36,7 @@ export const PlantCanvas: React.FC<PlantCanvasProps> = ({ data, plantType }) => 
   }, [data, plantType]);
 
   return (
-    <div className="canvas-panel canvas-panel-anim">
+    <div className="canvas-panel canvas-panel-machinery">
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );
