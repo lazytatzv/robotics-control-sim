@@ -34,7 +34,7 @@ impl Default for DcMotorParams {
             ke: 0.05,
             r: 1.0,
             l: 0.005,
-            coulomb_friction: 0.01,
+            coulomb_friction: 0.001,
         }
     }
 }
@@ -85,7 +85,6 @@ impl DcMotorPlant {
             let d_current = if p.l > 1e-6 {
                 (v - p.r * current - p.ke * omega) / p.l
             } else {
-                // Quasi-steady state current
                 0.0
             };
 
@@ -95,7 +94,6 @@ impl DcMotorPlant {
         if p.l > 1e-6 {
             self.state = rk4_step(ode, 0.0, &self.state, voltage, dt);
         } else {
-            // Simplified: current = (voltage - Ke * omega) / R
             let current = (voltage - p.ke * self.state[1]) / p.r;
             self.state[2] = current;
             let ode_mech = |_t: f64, x: &[f64; 2], v: f64| -> [f64; 2] {
@@ -145,7 +143,7 @@ impl Default for MassSpringDamperParams {
             mass: 1.0,
             damping: 0.5,
             stiffness: 2.0,
-            friction: 0.05,
+            friction: 0.005,
         }
     }
 }
