@@ -13,7 +13,7 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: 'Control Signal u(t) & Term Breakdown (P, I, D)',
+        title: 'CONTROL EFFORT u(t) & GAIN DECOMPOSITION',
       });
     }
   }, []);
@@ -29,16 +29,16 @@ export const ControlPlot: React.FC<ControlPlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: 'Control u(t)', color: '#ec4899', getValue: (d) => d.u, lineWidth: 2.5 },
-        { name: 'P-term', color: '#38bdf8', getValue: (d) => d.p_term, dashed: true, lineWidth: 1.2 },
-        { name: 'I-term', color: '#a855f7', getValue: (d) => d.i_term, dashed: true, lineWidth: 1.2 },
-        { name: 'D-term', color: '#10b981', getValue: (d) => d.d_term, dashed: true, lineWidth: 1.2 },
+        { name: 'u(t)', color: '#f43f5e', getValue: (d) => d.u, lineWidth: 2 },
+        { name: 'P', color: '#38bdf8', getValue: (d) => d.p_term, dashed: true, lineWidth: 1 },
+        { name: 'I', color: '#a855f7', getValue: (d) => d.i_term, dashed: true, lineWidth: 1 },
+        { name: 'D', color: '#10b981', getValue: (d) => d.d_term, dashed: true, lineWidth: 1 },
       ]);
     }
   }, [history]);
 
   return (
-    <div className="canvas-container canvas-plot">
+    <div className="canvas-panel canvas-panel-plot">
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );

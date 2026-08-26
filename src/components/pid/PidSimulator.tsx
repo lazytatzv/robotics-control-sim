@@ -35,16 +35,11 @@ export const PidSimulator: React.FC = () => {
   const [lastDataPoint, setLastDataPoint] = useState<StepDataPoint | null>(null);
   const [historySnapshot, setHistorySnapshot] = useState<StepDataPoint[]>([]);
 
-  // Initialize Wasm Simulator
   useEffect(() => {
     const sim = new Simulator();
     simRef.current = sim;
-    return () => {
-      // sim.free() handled automatically if needed
-    };
   }, []);
 
-  // Sync parameters with Rust Simulator
   useEffect(() => {
     if (!simRef.current) return;
     simRef.current.configure_pid(
@@ -60,7 +55,6 @@ export const PidSimulator: React.FC = () => {
     );
   }, [controlState]);
 
-  // Handle plant type change
   useEffect(() => {
     if (!simRef.current) return;
     simRef.current.set_plant_type(controlState.plantType);
@@ -146,7 +140,6 @@ export const PidSimulator: React.FC = () => {
     });
   }, []);
 
-  // Compute performance metrics
   const calculateMetrics = (data: StepDataPoint[]) => {
     if (data.length < 20) return;
     const target = data[data.length - 1].setpoint;
@@ -171,7 +164,6 @@ export const PidSimulator: React.FC = () => {
 
     const overshoot = delta > 0 ? Math.max(0, (peak - target) / delta) * 100 : Math.max(0, (target - peak) / -delta) * 100;
 
-    // 10% to 90% rise time
     const y10 = initial + delta * 0.1;
     const y90 = initial + delta * 0.9;
     let t10: number | null = null;
@@ -182,7 +174,6 @@ export const PidSimulator: React.FC = () => {
       if (t90 === null && (delta > 0 ? d.actual >= y90 : d.actual <= y90)) t90 = d.t;
     }
 
-    // 5% settling time
     let ts: number | null = null;
     for (let i = data.length - 1; i >= 0; i--) {
       if (Math.abs(data[i].actual - target) > Math.abs(delta) * 0.05) {
@@ -192,19 +183,18 @@ export const PidSimulator: React.FC = () => {
     }
 
     setMetrics({
-      riseTime: t10 !== null && t90 !== null && t90 >= t10 ? `${(t90 - t10).toFixed(2)} s` : '--',
-      overshoot: `${overshoot.toFixed(1)} %`,
-      settlingTime: ts !== null ? `${ts.toFixed(2)} s` : '--',
+      riseTime: t10 !== null && t90 !== null && t90 >= t10 ? `${(t90 - t10).toFixed(2)}s` : '--',
+      overshoot: `${overshoot.toFixed(1)}%`,
+      settlingTime: ts !== null ? `${ts.toFixed(2)}s` : '--',
       steadyStateError: Math.abs(target - data[data.length - 1].actual).toFixed(3),
     });
   };
 
-  // 60FPS simulation loop
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
-    const simDt = 0.005; // 5ms step
-    const maxHistory = 1000;
+    const simDt = 0.005;
+    const maxHistory = 800;
 
     const tick = (currentTime: number) => {
       const elapsedSec = (currentTime - lastTime) / 1000;
@@ -253,7 +243,7 @@ export const PidSimulator: React.FC = () => {
         onApplyPreset={handleApplyPreset}
       />
 
-      <section className="viewport-grid">
+      <section className="viewport-deck">
         <MetricsBar metrics={metrics} />
         <PlantCanvas data={lastDataPoint} plantType={controlState.plantType} />
         <ResponsePlot history={historySnapshot} />

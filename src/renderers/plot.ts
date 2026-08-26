@@ -54,19 +54,17 @@ export class CanvasPlotter {
 
     if (history.length === 0) return;
 
-    const padLeft = 50 * dpr;
-    const padRight = 20 * dpr;
-    const padTop = 30 * dpr;
-    const padBottom = 30 * dpr;
+    const padLeft = 45 * dpr;
+    const padRight = 16 * dpr;
+    const padTop = 26 * dpr;
+    const padBottom = 22 * dpr;
 
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
 
-    // Time range (X-axis)
     const tMin = history[0].t;
     const tMax = Math.max(history[history.length - 1].t, tMin + 0.1);
 
-    // Value range (Y-axis)
     let yMin = this.options.yMin ?? Infinity;
     let yMax = this.options.yMax ?? -Infinity;
 
@@ -88,7 +86,6 @@ export class CanvasPlotter {
         yMin = -1;
         yMax = 1;
       }
-      // Add 10% padding
       const range = Math.max(yMax - yMin, 0.1);
       yMin -= range * 0.08;
       yMax += range * 0.08;
@@ -97,14 +94,13 @@ export class CanvasPlotter {
     const mapX = (t: number) => padLeft + ((t - tMin) / (tMax - tMin)) * plotW;
     const mapY = (val: number) => padTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
-    // Draw background grid
-    ctx.strokeStyle = '#1e293b'; // slate-800
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1 * dpr;
-    ctx.fillStyle = '#64748b'; // slate-500
-    ctx.font = `${10 * dpr}px sans-serif`;
+    ctx.fillStyle = '#52525b';
+    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, Menlo, monospace`;
 
-    // Horizontal grid lines
-    const yTicks = 5;
+    const yTicks = 4;
     for (let i = 0; i <= yTicks; i++) {
       const val = yMin + (i / yTicks) * (yMax - yMin);
       const y = mapY(val);
@@ -118,8 +114,7 @@ export class CanvasPlotter {
       ctx.fillText(val.toFixed(1), padLeft - 6 * dpr, y);
     }
 
-    // Vertical grid lines
-    const xTicks = 5;
+    const xTicks = 4;
     for (let i = 0; i <= xTicks; i++) {
       const t = tMin + (i / xTicks) * (tMax - tMin);
       const x = mapX(t);
@@ -130,50 +125,26 @@ export class CanvasPlotter {
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText(`${t.toFixed(1)}s`, x, padTop + plotH + 6 * dpr);
+      ctx.fillText(`${t.toFixed(1)}s`, x, padTop + plotH + 4 * dpr);
     }
 
-    // Draw Zero line
+    // Zero axis
     if (this.options.showZeroLine && yMin <= 0 && yMax >= 0) {
       const yZero = mapY(0);
-      ctx.strokeStyle = '#475569'; // slate-600
-      ctx.lineWidth = 1.5 * dpr;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1 * dpr;
       ctx.beginPath();
       ctx.moveTo(padLeft, yZero);
       ctx.lineTo(w - padRight, yZero);
       ctx.stroke();
     }
 
-    // Draw Saturation Limits if specified
-    if (this.options.saturationLimits) {
-      const { min: satMin, max: satMax } = this.options.saturationLimits;
-      ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)'; // red-500
-      ctx.lineWidth = 1.2 * dpr;
-
-      // Max Saturation
-      const yMaxSat = mapY(satMax);
-      ctx.beginPath();
-      ctx.moveTo(padLeft, yMaxSat);
-      ctx.lineTo(w - padRight, yMaxSat);
-      ctx.stroke();
-
-      // Min Saturation
-      const yMinSat = mapY(satMin);
-      ctx.beginPath();
-      ctx.moveTo(padLeft, yMinSat);
-      ctx.lineTo(w - padRight, yMinSat);
-      ctx.stroke();
-
-      ctx.setLineDash([]);
-    }
-
-    // Draw data series
+    // Draw lines
     for (const s of series) {
       ctx.strokeStyle = s.color;
-      ctx.lineWidth = (s.lineWidth ?? 2) * dpr;
+      ctx.lineWidth = (s.lineWidth ?? 1.5) * dpr;
       if (s.dashed) {
-        ctx.setLineDash([6 * dpr, 3 * dpr]);
+        ctx.setLineDash([4 * dpr, 3 * dpr]);
       } else {
         ctx.setLineDash([]);
       }
@@ -194,16 +165,16 @@ export class CanvasPlotter {
     }
     ctx.setLineDash([]);
 
-    // Draw Plot Title and Unit
-    ctx.fillStyle = '#f8fafc'; // slate-50
-    ctx.font = `bold ${12 * dpr}px sans-serif`;
+    // Title HUD
+    ctx.fillStyle = '#71717a';
+    ctx.font = `600 ${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(this.options.title, padLeft, 8 * dpr);
 
-    // Draw Legend in upper right
+    // Legend
     let legendX = w - padRight;
-    ctx.font = `${11 * dpr}px sans-serif`;
+    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'right';
     for (let i = series.length - 1; i >= 0; i--) {
       const s = series[i];
@@ -212,7 +183,7 @@ export class CanvasPlotter {
       
       ctx.fillStyle = s.color;
       ctx.fillText(label, legendX, 8 * dpr);
-      legendX -= (ctx.measureText(label).width + 16 * dpr);
+      legendX -= (ctx.measureText(label).width + 12 * dpr);
     }
   }
 }

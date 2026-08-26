@@ -47,7 +47,7 @@ export class ArmRenderer {
       const dpr = window.devicePixelRatio || 1;
       const cx = (this.canvas.width / dpr) / 2;
       const cy = (this.canvas.height / dpr) * 0.8;
-      const scale = 110; // pixels per unit
+      const scale = 110;
 
       const worldX = (px - cx) / scale;
       const worldY = (cy - py) / scale;
@@ -93,13 +93,13 @@ export class ArmRenderer {
     const cy = h * 0.8;
     const scale = 110 * dpr;
 
-    // Workspace reach circles
+    // Reach envelope
     const maxReach = (this.l1 + this.l2) * scale;
     const minReach = Math.abs(this.l1 - this.l2) * scale;
 
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+    ctx.strokeStyle = '#27272a';
     ctx.lineWidth = 1 * dpr;
-    ctx.setLineDash([4 * dpr, 4 * dpr]);
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
     ctx.beginPath();
     ctx.arc(cx, cy, maxReach, 0, Math.PI * 2);
     ctx.stroke();
@@ -110,7 +110,6 @@ export class ArmRenderer {
     }
     ctx.setLineDash([]);
 
-    // Call Rust Wasm Inverse Kinematics
     const ikResult = arm2_ik(this.l1, this.l2, this.targetX, this.targetY, this.elbowUp) as [number, number] | undefined;
     const reachable = ikResult !== undefined && ikResult !== null;
 
@@ -121,12 +120,10 @@ export class ArmRenderer {
       theta1 = ikResult[0];
       theta2 = ikResult[1];
     } else {
-      // Approximate pointing towards target
       theta1 = Math.atan2(this.targetY, this.targetX);
       theta2 = 0;
     }
 
-    // Call Rust Wasm Forward Kinematics to get actual joint positions
     const [elbowX, elbowY, eeX, eeY] = arm2_fk(this.l1, this.l2, theta1, theta2) as [number, number, number, number];
 
     const baseScr = { x: cx, y: cy };
@@ -135,15 +132,15 @@ export class ArmRenderer {
     const targetScr = { x: cx + this.targetX * scale, y: cy - this.targetY * scale };
 
     // Base pedestal
-    ctx.fillStyle = '#1e293b';
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 2 * dpr;
-    ctx.fillRect(cx - 30 * dpr, cy, 60 * dpr, 20 * dpr);
-    ctx.strokeRect(cx - 30 * dpr, cy, 60 * dpr, 20 * dpr);
+    ctx.fillStyle = '#18181b';
+    ctx.strokeStyle = '#3f3f46';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.fillRect(cx - 25 * dpr, cy, 50 * dpr, 14 * dpr);
+    ctx.strokeRect(cx - 25 * dpr, cy, 50 * dpr, 14 * dpr);
 
     // Link 1
-    ctx.strokeStyle = '#38bdf8'; // sky-400
-    ctx.lineWidth = 8 * dpr;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 5 * dpr;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(baseScr.x, baseScr.y);
@@ -151,53 +148,51 @@ export class ArmRenderer {
     ctx.stroke();
 
     // Link 2
-    ctx.strokeStyle = '#818cf8'; // indigo-400
-    ctx.lineWidth = 6 * dpr;
+    ctx.strokeStyle = '#818cf8';
+    ctx.lineWidth = 4 * dpr;
     ctx.beginPath();
     ctx.moveTo(elbowScr.x, elbowScr.y);
     ctx.lineTo(eeScr.x, eeScr.y);
     ctx.stroke();
 
-    // Joint 1 (Base)
-    ctx.fillStyle = '#0284c7';
-    ctx.beginPath();
-    ctx.arc(baseScr.x, baseScr.y, 8 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Joint 2 (Elbow)
-    ctx.fillStyle = '#6366f1';
-    ctx.beginPath();
-    ctx.arc(elbowScr.x, elbowScr.y, 7 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-
-    // End Effector
-    ctx.fillStyle = reachable ? '#10b981' : '#ef4444';
-    ctx.beginPath();
-    ctx.arc(eeScr.x, eeScr.y, 6 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Target Drag Point Marker
-    ctx.strokeStyle = '#f59e0b';
+    // Joints
+    ctx.fillStyle = '#09090b';
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2 * dpr;
     ctx.beginPath();
-    ctx.arc(targetScr.x, targetScr.y, 10 * dpr, 0, Math.PI * 2);
+    ctx.arc(baseScr.x, baseScr.y, 6 * dpr, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = '#f59e0b';
+    ctx.strokeStyle = '#818cf8';
     ctx.beginPath();
-    ctx.arc(targetScr.x, targetScr.y, 3 * dpr, 0, Math.PI * 2);
+    ctx.arc(elbowScr.x, elbowScr.y, 5 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // End Effector
+    ctx.fillStyle = reachable ? '#22c55e' : '#ef4444';
+    ctx.beginPath();
+    ctx.arc(eeScr.x, eeScr.y, 4 * dpr, 0, Math.PI * 2);
     ctx.fill();
 
-    // Coordinate & Angle HUD
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = `${11 * dpr}px sans-serif`;
+    // Target crosshair
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.arc(targetScr.x, targetScr.y, 8 * dpr, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // HUD Telemetry
+    ctx.fillStyle = '#71717a';
+    ctx.font = `${9 * dpr}px ui-monospace, SFMono-Regular, monospace`;
     ctx.textAlign = 'left';
-    ctx.fillText(`Target (X, Y): (${this.targetX.toFixed(2)}, ${this.targetY.toFixed(2)}) m`, 12 * dpr, 20 * dpr);
-    ctx.fillText(`Status: ${reachable ? 'Reachable' : 'Out of Reach (Singularity)'}`, 12 * dpr, 36 * dpr);
+    ctx.fillText(`TARGET: (${this.targetX.toFixed(2)}, ${this.targetY.toFixed(2)}) m`, 12 * dpr, 16 * dpr);
+    ctx.fillText(`STATUS: ${reachable ? 'REACHABLE' : 'SINGULARITY / OUT OF REACH'}`, 12 * dpr, 30 * dpr);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`θ1: ${((theta1 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 20 * dpr);
-    ctx.fillText(`θ2: ${((theta2 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 36 * dpr);
+    ctx.fillText(`THETA-1: ${((theta1 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 16 * dpr);
+    ctx.fillText(`THETA-2: ${((theta2 * 180) / Math.PI).toFixed(1)}°`, w - 12 * dpr, 30 * dpr);
 
     return {
       theta1Deg: (theta1 * 180) / Math.PI,

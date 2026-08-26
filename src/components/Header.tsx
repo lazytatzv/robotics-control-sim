@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Activity, Compass, BookOpen } from 'lucide-react';
+import { Sliders, GitFork, FileText } from 'lucide-react';
 
 export type TabId = 'pid' | 'arm' | 'theory';
 
@@ -12,9 +12,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab }) => {
   return (
     <header>
       <div className="logo-area">
-        <Cpu className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
-        <h1 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Robotics & Control Lab</h1>
-        <span className="badge-wasm">Rust / Wasm</span>
+        <span className="brand-title">Control Lab</span>
+        <span className="badge-wasm">WASM · RK4</span>
       </div>
 
       <nav className="nav-tabs">
@@ -22,22 +21,22 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onSelectTab }) => {
           className={`tab-btn ${activeTab === 'pid' ? 'active' : ''}`}
           onClick={() => onSelectTab('pid')}
         >
-          <Activity style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
+          <Sliders size={13} />
           PID Control
         </button>
         <button
           className={`tab-btn ${activeTab === 'arm' ? 'active' : ''}`}
           onClick={() => onSelectTab('arm')}
         >
-          <Compass style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-          2-DOF Arm Kinematics
+          <GitFork size={13} />
+          Kinematics (2-DOF)
         </button>
         <button
           className={`tab-btn ${activeTab === 'theory' ? 'active' : ''}`}
           onClick={() => onSelectTab('theory')}
         >
-          <BookOpen style={{ width: 15, height: 15, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-          Theory & Reference
+          <FileText size={13} />
+          Reference
         </button>
       </nav>
     </header>

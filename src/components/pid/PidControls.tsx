@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Play, Pause, Zap, Flame } from 'lucide-react';
+import { Play, Pause, RotateCcw, Zap, Flame } from 'lucide-react';
 
 export interface PidControlState {
   plantType: 'motor_pos' | 'motor_velocity' | 'cart';
@@ -34,42 +34,37 @@ export const PidControls: React.FC<PidControlsProps> = ({
   onApplyPreset,
 }) => {
   return (
-    <aside className="sidebar card">
-      <div>
-        <div className="section-title">
-          <span>Target System (Plant)</span>
-        </div>
+    <aside className="sidebar">
+      {/* Plant Configuration */}
+      <div className="control-section">
+        <div className="section-label">Plant & Preset</div>
         <div className="form-group">
           <select
             value={state.plantType}
             onChange={(e) => onChange({ plantType: e.target.value as any })}
           >
-            <option value="motor_pos">DC Motor Position Control (θ)</option>
-            <option value="motor_velocity">DC Motor Velocity Control (ω)</option>
-            <option value="cart">Mass-Spring-Damper Cart (x)</option>
+            <option value="motor_pos">DC Motor Position (θ)</option>
+            <option value="motor_velocity">DC Motor Velocity (ω)</option>
+            <option value="cart">Mass-Spring-Damper (x)</option>
           </select>
         </div>
-
         <div className="form-group">
-          <label>Presets</label>
           <select onChange={(e) => onApplyPreset(e.target.value)} defaultValue="tuned">
-            <option value="tuned">Well-Tuned (Fast & Damped)</option>
-            <option value="oscillatory">Oscillatory (High Kp)</option>
-            <option value="sluggish">Sluggish (Low Kp)</option>
-            <option value="windup_demo">Windup Demonstration (Saturation + High Ki)</option>
-            <option value="ipd_demo">I-PD Control (Kick Prevention)</option>
+            <option value="tuned">Preset: Well-Tuned</option>
+            <option value="oscillatory">Preset: Underdamped (High Kp)</option>
+            <option value="sluggish">Preset: Overdamped (Low Kp)</option>
+            <option value="windup_demo">Preset: Integrator Windup Demo</option>
+            <option value="ipd_demo">Preset: I-PD Kick Prevention</option>
           </select>
         </div>
       </div>
 
-      <div>
-        <div className="section-title">
-          <span>PID Parameters</span>
-        </div>
-
+      {/* PID Gains */}
+      <div className="control-section">
+        <div className="section-label">Controller Gains</div>
         <div className="form-group">
           <label>
-            Proportional Gain Kp: <span className="val">{state.kp.toFixed(1)}</span>
+            Kp (Proportional) <span className="val">{state.kp.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -80,10 +75,9 @@ export const PidControls: React.FC<PidControlsProps> = ({
             onChange={(e) => onChange({ kp: parseFloat(e.target.value) })}
           />
         </div>
-
         <div className="form-group">
           <label>
-            Integral Gain Ki: <span className="val">{state.ki.toFixed(1)}</span>
+            Ki (Integral) <span className="val">{state.ki.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -94,10 +88,9 @@ export const PidControls: React.FC<PidControlsProps> = ({
             onChange={(e) => onChange({ ki: parseFloat(e.target.value) })}
           />
         </div>
-
         <div className="form-group">
           <label>
-            Derivative Gain Kd: <span className="val">{state.kd.toFixed(2)}</span>
+            Kd (Derivative) <span className="val">{state.kd.toFixed(3)}</span>
           </label>
           <input
             type="range"
@@ -108,10 +101,9 @@ export const PidControls: React.FC<PidControlsProps> = ({
             onChange={(e) => onChange({ kd: parseFloat(e.target.value) })}
           />
         </div>
-
         <div className="form-group">
           <label>
-            Derivative Filter N: <span className="val">{state.filterN.toFixed(0)}</span>
+            Filter N (Cutoff) <span className="val">{state.filterN.toFixed(0)}</span>
           </label>
           <input
             type="range"
@@ -124,38 +116,34 @@ export const PidControls: React.FC<PidControlsProps> = ({
         </div>
       </div>
 
-      <div>
-        <div className="section-title">
-          <span>Controller Form & Anti-Windup</span>
-        </div>
-
+      {/* Architecture & Anti-Windup */}
+      <div className="control-section">
+        <div className="section-label">Structure & Limits</div>
         <div className="form-group">
-          <label>Algorithm Form</label>
+          <label>Structure</label>
           <select
             value={state.form}
             onChange={(e) => onChange({ form: e.target.value as any })}
           >
-            <option value="standard">Standard PID (P, I, D on Error)</option>
-            <option value="pi_d">PI-D (Derivative on Measurement)</option>
-            <option value="i_pd">I-PD (Proportional & Derivative on Measurement)</option>
+            <option value="standard">Standard PID</option>
+            <option value="pi_d">PI-D (Derivative on PV)</option>
+            <option value="i_pd">I-PD (Proportional & Deriv on PV)</option>
           </select>
         </div>
-
         <div className="form-group">
-          <label>Anti-Windup Method</label>
+          <label>Anti-Windup</label>
           <select
             value={state.antiWindup}
             onChange={(e) => onChange({ antiWindup: e.target.value as any })}
           >
-            <option value="clamping">Clamping (Conditional Integration)</option>
-            <option value="back_calc">Back-Calculation Tracking</option>
-            <option value="none">None (Unconstrained Windup)</option>
+            <option value="clamping">Clamping (Conditional)</option>
+            <option value="back_calc">Back-Calculation (Kb=1.0)</option>
+            <option value="none">None (Unbounded)</option>
           </select>
         </div>
-
         <div className="form-group">
           <label>
-            Output Saturation Limit (±Umax): <span className="val">{state.saturation.toFixed(1)}</span>
+            Limit ±Umax <span className="val">{state.saturation.toFixed(1)} V</span>
           </label>
           <input
             type="range"
@@ -168,14 +156,12 @@ export const PidControls: React.FC<PidControlsProps> = ({
         </div>
       </div>
 
-      <div>
-        <div className="section-title">
-          <span>Setpoint, Disturbance & Noise</span>
-        </div>
-
+      {/* Signals & Testing */}
+      <div className="control-section">
+        <div className="section-label">Signals & Disturbance</div>
         <div className="form-group">
           <label>
-            Target Setpoint: <span className="val">{state.target.toFixed(2)}</span>
+            Setpoint (r) <span className="val">{state.target.toFixed(2)}</span>
           </label>
           <input
             type="range"
@@ -186,10 +172,9 @@ export const PidControls: React.FC<PidControlsProps> = ({
             onChange={(e) => onChange({ target: parseFloat(e.target.value) })}
           />
         </div>
-
         <div className="form-group">
           <label>
-            Load Disturbance: <span className="val">{state.disturbance.toFixed(1)}</span>
+            Load Torque (d) <span className="val">{state.disturbance.toFixed(1)} N·m</span>
           </label>
           <input
             type="range"
@@ -200,10 +185,9 @@ export const PidControls: React.FC<PidControlsProps> = ({
             onChange={(e) => onChange({ disturbance: parseFloat(e.target.value) })}
           />
         </div>
-
         <div className="form-group">
           <label>
-            Sensor Noise Amplitude: <span className="val">{state.noise.toFixed(3)}</span>
+            Noise Amplitude <span className="val">{state.noise.toFixed(3)}</span>
           </label>
           <input
             type="range"
@@ -215,35 +199,26 @@ export const PidControls: React.FC<PidControlsProps> = ({
           />
         </div>
 
-        <div className="btn-row">
-          <button className="btn btn-primary" onClick={onStepInput}>
-            <Zap style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-            Step Input (Invert)
+        <div className="btn-group">
+          <button className="btn btn-accent" onClick={onStepInput}>
+            <Zap size={12} />
+            Step Invert
           </button>
           <button className="btn" onClick={onPulseDisturbance}>
-            <Flame style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
-            Pulse Disturbance
+            <Flame size={12} />
+            Pulse Load
           </button>
         </div>
-
-        <div className="btn-row">
-          <button className="btn btn-danger" onClick={onReset}>
-            <RotateCcw style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />
+        <div className="btn-group">
+          <button className="btn" onClick={onReset}>
+            <RotateCcw size={12} />
             Reset
           </button>
           <button
-            className={`btn ${state.isPaused ? 'btn-active' : ''}`}
+            className={`btn ${state.isPaused ? 'btn-primary' : ''}`}
             onClick={() => onChange({ isPaused: !state.isPaused })}
           >
-            {state.isPaused ? (
-              <>
-                <Play style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> Resume
-              </>
-            ) : (
-              <>
-                <Pause style={{ width: 14, height: 14, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> Pause
-              </>
-            )}
+            {state.isPaused ? <><Play size={12} /> Run</> : <><Pause size={12} /> Pause</>}
           </button>
         </div>
       </div>

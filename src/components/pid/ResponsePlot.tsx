@@ -13,7 +13,7 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (canvasRef.current && !plotterRef.current) {
       plotterRef.current = new CanvasPlotter(canvasRef.current, {
-        title: 'Time Response: Setpoint r(t) vs Output y(t)',
+        title: 'TIME RESPONSE: SETPOINT r(t) VS OUTPUT y(t)',
       });
     }
   }, []);
@@ -29,14 +29,14 @@ export const ResponsePlot: React.FC<ResponsePlotProps> = ({ history }) => {
   useEffect(() => {
     if (plotterRef.current && history.length > 0) {
       plotterRef.current.render(history, [
-        { name: 'Setpoint r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true },
-        { name: 'Output y(t)', color: '#38bdf8', getValue: (d) => d.actual },
+        { name: 'r(t)', color: '#f59e0b', getValue: (d) => d.setpoint, dashed: true },
+        { name: 'y(t)', color: '#38bdf8', getValue: (d) => d.actual },
       ]);
     }
   }, [history]);
 
   return (
-    <div className="canvas-container canvas-plot">
+    <div className="canvas-panel canvas-panel-plot">
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );
