@@ -151,6 +151,12 @@ export class CanvasPlotter {
       ctx.fillText(`${t.toFixed(1)}s`, x, padTop + plotH + 4 * dpr);
     }
 
+    // Zero Reference Line & Signal Traces (Clipped to plot area)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(padLeft, padTop, plotW, plotH);
+    ctx.clip();
+
     // Zero Reference Line
     if (this.options.showZeroLine && yMin <= 0 && yMax >= 0) {
       const yZero = mapY(0);
@@ -205,6 +211,9 @@ export class CanvasPlotter {
       ctx.beginPath();
       let first = true;
       for (const d of history) {
+        // Skip points far to the left of the screen (keep 1 point before tMin for smooth edge)
+        if (d.t < tMin - 0.05) continue;
+
         const x = mapX(d.t);
         const y = mapY(s.getValue(d));
         if (first) {
@@ -217,6 +226,7 @@ export class CanvasPlotter {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    ctx.restore();
 
     // Scope Title
     ctx.fillStyle = '#71717a';
